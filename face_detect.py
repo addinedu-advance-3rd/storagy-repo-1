@@ -12,10 +12,9 @@ class FaceDetect:
     IMG_SRC_FOLDER = "img_src"  # 얼굴 데이터가 저장될 폴더
     METADATA_PATH = os.path.join(IMG_SRC_FOLDER, "face_metadata.json")  # 얼굴 메타데이터 경로
 
-    def __init__(self):
+    def __init__(self,latest_worker):
         # CUDA 사용 여부 확인
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if torch.cuda.is_available():
             print(f"Using GPU: {torch.cuda.get_device_name(0)}")
         else:
@@ -24,6 +23,9 @@ class FaceDetect:
         #얼굴비교모델 facenet
         self.facenet = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
         self.reference_embeddings = self.load_embeddings()  # 기존 얼굴 데이터 로드
+        self.latest_worker = latest_worker  # 공유 메모리 객체
+        self.last_valid_worker = None  # "No Match"가 아닐 때의 최근 사용자 저장
+
 
     #임베딩 정보 로드
     def load_embeddings(self):
@@ -91,13 +93,24 @@ class FaceDetect:
                     if distance < min_distance:
                         min_distance = distance
                         best_match = user_id if min_distance < 0.7 else "No Match"
+                
+                if best_match != "No Match":
+                    self.last_valid_worker = best_match
+                    self.latest_worker.value = best_match  # 🔹 공유 메모리에 업데이트
+                else:
+                    if self.last_valid_worker is not None:
+                        self.latest_worker.value = self.last_valid_worker  # 🔹 유지
+
+
+                print(f"🔹 최근 감지된 사용자: {self.latest_worker.value}")  
+
 
                 #바운딩 박스 및 텍스트 표시
                 x1, y1, x2, y2 = [int(b) for b in box]
                 color = (0, 255, 0) if best_match != "No Match" else (0, 0, 255)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame, best_match, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
-                print(f"최근 사용자: {best_match}")
+                
 
             cv2.imshow("Face Detection", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -107,5 +120,8 @@ class FaceDetect:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    detector = FaceDetect()
+    manager = multiprocessing.Manager()
+    latest_worker = manager.Value("s", "No Match")  # 공유 메모리 생성
+
+    detector = FaceDetect(latest_worker)  # ✅ latest_worker 전달
     detector.recognize_face()

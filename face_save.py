@@ -14,10 +14,8 @@ class FaceSaver:
 
     def __init__(self):
         #쓰는 모델들
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # CUDA 사용 여부 확인
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if torch.cuda.is_available():
             print(f"Using GPU: {torch.cuda.get_device_name(0)}")
         else:

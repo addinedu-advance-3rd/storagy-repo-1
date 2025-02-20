@@ -1,0 +1,5 @@
+ 구현 방법
+✅ 1. face_detect.py를 tools_detect.py에서 import
+✅ 2. YOLO를 활용하여 핸드폰 감지 추가
+✅ 3. 핸드폰이 사라지면 → 최근 감지된 Worker와 매칭
+✅ 4. 핸드폰이 다시 나타나면 → 반납 처리
