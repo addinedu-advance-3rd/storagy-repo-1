@@ -74,6 +74,8 @@ class FaceDetect:
 
         print("Press 'q' to quit.")
 
+        frame_count = 0 #프레임 카운터 -> 상태 업데이트 횟수 조정 
+
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -92,17 +94,18 @@ class FaceDetect:
                     distance = self.calculate_distance(ref_embedding, embedding)
                     if distance < min_distance:
                         min_distance = distance
-                        best_match = user_id if min_distance < 0.7 else "No Match"
+                        best_match = user_id if min_distance < 0.8 else "No Match"
                 
                 if best_match != "No Match":
                     self.last_valid_worker = best_match
-                    self.latest_worker.value = best_match  # 🔹 공유 메모리에 업데이트
-                else:
-                    if self.last_valid_worker is not None:
-                        self.latest_worker.value = self.last_valid_worker  # 🔹 유지
 
+                # 🔹 10프레임마다 상태 업데이트 & 출력
+                if frame_count % 15 == 0:
+                    self.latest_worker.value = self.last_valid_worker if self.last_valid_worker is not None else "No Match"
+                    print(f"🔹 최근 감지된 사용자: {self.latest_worker.value}")
+                
+                frame_count += 1
 
-                print(f"🔹 최근 감지된 사용자: {self.latest_worker.value}")  
 
 
                 #바운딩 박스 및 텍스트 표시
@@ -113,7 +116,7 @@ class FaceDetect:
                 
 
             cv2.imshow("Face Detection", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(30) & 0xFF == ord('q'):
                 break
 
         cap.release()

@@ -1,6 +1,6 @@
 import multiprocessing
 from face_detect import FaceDetect
-from tools_detect import ObjectDetect
+from tools_detect_test import ObjectDetect
 
 def run_face_detection(latest_worker):
     face_detector = FaceDetect(latest_worker)
