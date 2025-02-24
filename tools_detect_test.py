@@ -2,13 +2,14 @@ import cv2
 import torch
 import logging
 import time
+from datetime import datetime
 from ultralytics import YOLO
 
 # 🔹 YOLO 로그 메시지를 끄기 위한 설정
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 class ObjectDetect:
-    def __init__(self, latest_worker, cam_index=2, model_path="yolov8n.pt", lost_frame_count=30, detected_frame_count=30):
+    def __init__(self, latest_worker, cam_index=2, model_path="yolov8n.pt", lost_frame_count=45, detected_frame_count=45):
         """
         객체 감지를 수행하는 클래스
         - latest_worker: 최근 감지된 사용자를 공유하는 변수
@@ -29,6 +30,8 @@ class ObjectDetect:
         self.previous_state = {"Cellphone": "Missing", "Bottle": "Missing", "Mouse": "Missing"}  # 이전 상태 저장
         self.confirmed_state = {"Cellphone": "Missing", "Bottle": "Missing", "Mouse": "Missing"}  # 최소 프레임 유지된 확정 상태
         self.state_count = {"Cellphone": 0, "Bottle": 0, "Mouse": 0}  # 감지 연속 프레임 카운트
+        self.rental_times = {"Cellphone": None, "Bottle": None, "Mouse": None}  # 대여 시간 저장
+        self.return_times = {"Cellphone": None, "Bottle": None, "Mouse": None}  # 반납 시간 저장
 
         # 🔹 감지할 클래스 지정 (cell phone: 67, bottle: 39, mouse: 64)
         self.target_classes = {67: "Cellphone", 39: "Bottle", 64: "Mouse"}
@@ -50,22 +53,24 @@ class ObjectDetect:
             # 🔹 최소 감지 프레임을 충족해야 상태 변경 확정
             if self.detected_objects[obj] == self.lost_frame_count:
                 self.confirmed_state[obj] = "Detected"
+                if self.rental_times[obj]:  # 대여 상태였다면 반납 시간 기록
+                    self.return_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             elif self.detected_objects[obj] == 0:
                 self.confirmed_state[obj] = "Missing"
+                self.rental_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # 사라진 순간 대여 시간 기록
+                self.return_times[obj] = None  # 아직 반납되지 않음
 
             # 🔹 상태 변화 확인 후 이벤트 발생 (같은 상태에서는 중복 실행 X)
             if self.previous_state[obj] != self.confirmed_state[obj]:
                 prev_user = self.last_user
                 self.last_user = self.latest_worker.value if self.latest_worker.value != "No Match" else "Unknown User"
                 if self.confirmed_state[obj] == "Missing":
-                    print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user})")
+                    print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")
                 else:
-                    print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user})")
+                    print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}")
             
             self.previous_state[obj] = self.confirmed_state[obj]  # 이전 상태 업데이트
 
-
-    #cam open(main)
     def detect_objects(self):
         if not self.cap.isOpened():
             print("Error: 객체 감지 카메라를 열 수 없습니다.")
