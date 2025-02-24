@@ -25,16 +25,16 @@ class ObjectDetect:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.latest_worker = latest_worker  # FaceDetect의 감지 결과 공유
-        self.detected_objects = {"Cellphone": lost_frame_count, "Bottle": lost_frame_count, "Mouse": lost_frame_count}  # 감지 상태 프레임 카운트
+        self.detected_objects = {"Spanner": lost_frame_count, "Hammer": lost_frame_count, "Driver": lost_frame_count}  # 감지 상태 프레임 카운트
         self.last_user = "Unknown User"
-        self.previous_state = {"Cellphone": "Missing", "Bottle": "Missing", "Mouse": "Missing"}  # 이전 상태 저장
-        self.confirmed_state = {"Cellphone": "Missing", "Bottle": "Missing", "Mouse": "Missing"}  # 최소 프레임 유지된 확정 상태
-        self.state_count = {"Cellphone": 0, "Bottle": 0, "Mouse": 0}  # 감지 연속 프레임 카운트
-        self.rental_times = {"Cellphone": None, "Bottle": None, "Mouse": None}  # 대여 시간 저장
-        self.return_times = {"Cellphone": None, "Bottle": None, "Mouse": None}  # 반납 시간 저장
+        self.previous_state = {"Spanner": "Missing", "Hammer": "Missing", "Driver": "Missing"}  # 이전 상태 저장
+        self.confirmed_state = {"Spanner": "Missing", "Hammer": "Missing", "Driver": "Missing"}  # 최소 프레임 유지된 확정 상태
+        self.state_count = {"Spanner": 0, "Hammer": 0, "Driver": 0}  # 감지 연속 프레임 카운트
+        self.rental_times = {"Spanner": None, "Hammer": None, "Driver": None}  # 대여 시간 저장
+        self.return_times = {"Spanner": None, "Hammer": None, "Driver": None}  # 반납 시간 저장
 
-        # 🔹 감지할 클래스 지정 (cell phone: 67, bottle: 39, mouse: 64)
-        self.target_classes = {67: "Cellphone", 39: "Bottle", 64: "Mouse"}
+        # 🔹 감지할 클래스 지정 (spanner: 67, hammer: 39, driver: 64)
+        self.target_classes = {67: "Spanner", 39: "Hammer", 64: "Driver"}
         self.lost_frame_count = lost_frame_count
         self.detected_frame_count = detected_frame_count
     
