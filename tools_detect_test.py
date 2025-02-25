@@ -4,6 +4,7 @@ import logging
 import time
 from datetime import datetime
 from ultralytics import YOLO
+import json
 
 # 🔹 YOLO 로그 메시지를 끄기 위한 설정
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
@@ -37,7 +38,59 @@ class ObjectDetect:
         self.target_classes = {67: "Spanner", 39: "Hammer", 64: "Driver"}
         self.lost_frame_count = lost_frame_count
         self.detected_frame_count = detected_frame_count
-    
+
+#################데이터 저장 및 로드 #####################
+        #json 경로 지정
+        self.tools_json_path = "db/tools.json"
+        self.log_json_path = "db/log.json"
+
+    def update_tools_json(self, tool_name, avail):
+        """ tools.json의 avail 상태를 업데이트 """
+        tools_data = self.load_json(self.tools_json_path)
+        for tool in tools_data:
+            if tool["name"] == tool_name:
+                tool["avail"] = avail  # 공구 상태 업데이트
+                break
+        self.save_json(self.tools_json_path, tools_data)
+
+    def update_log_json(self, tool_name, user_name, rental_time, return_time):
+        """ 반납될 때 log.json에 기록 추가 """
+        log_data = self.load_json(self.log_json_path)
+        tools_data = self.load_json(self.tools_json_path)
+
+        # tool_name을 tool_id로 변환
+        tool_id = next((tool["id"] for tool in tools_data if tool["name"] == tool_name), None)
+        if tool_id is None:
+            return
+
+        # 새로운 로그 기록 추가
+        log_entry = {
+            "id": len(log_data) + 1,  # 자동 증가
+            "tool_id": tool_id,
+            "user_name": user_name,
+            "rental_date": rental_time,
+            "return_date": return_time
+        }
+        log_data.append(log_entry)
+        self.save_json(self.log_json_path, log_data)
+
+    def load_json(self, path):
+        """ JSON 파일 읽기 """
+        try:
+            with open(path, "r") as file:
+                return json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return [] if "log" in path else []
+
+    def save_json(self, path, data):
+        """ JSON 파일 저장 """
+        with open(path, "w") as file:
+            json.dump(data, file, indent=4)
+
+################DB랑 합칠 때 포맷만 json-> db로 변경###########
+
+
+
     def update_detection_status(self, detected_now):
         """ 객체 감지 상태를 업데이트하고, 중복 이벤트 발생을 방지하는 함수 """
         for obj in self.detected_objects:
@@ -57,18 +110,30 @@ class ObjectDetect:
                     self.return_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             elif self.detected_objects[obj] == 0:
                 self.confirmed_state[obj] = "Missing"
-                self.rental_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # 사라진 순간 대여 시간 기록
+                if self.rental_times[obj] is None:  # ✅ 처음 사라질 때만 기록
+                    self.rental_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 self.return_times[obj] = None  # 아직 반납되지 않음
+
 
             # 🔹 상태 변화 확인 후 이벤트 발생 (같은 상태에서는 중복 실행 X)
             if self.previous_state[obj] != self.confirmed_state[obj]:
                 prev_user = self.last_user
                 self.last_user = self.latest_worker.value if self.latest_worker.value != "No Match" else "Unknown User"
+
+                ####json
+                #대여 발생
                 if self.confirmed_state[obj] == "Missing":
-                    print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")
+                    self.update_tools_json(obj, False)  # tools.json에서 avail = False
+                    print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")  # ✅ 기존 값 사용
+
+                #반납 발생
                 else:
+                    self.return_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    self.update_tools_json(obj, True)  # tools.json에서 avail = True
+                    self.update_log_json(obj, self.last_user, self.rental_times[obj], self.return_times[obj])  # log.json 업데이트          
                     print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}")
-            
+                ###json
+
             self.previous_state[obj] = self.confirmed_state[obj]  # 이전 상태 업데이트
 
     def detect_objects(self):
