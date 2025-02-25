@@ -42,3 +42,8 @@ IOU 기반 방식은 계산이 단순하고 빠름
 ✔ 현재 기술(YOLO + 공간적 관계 분석)로 충분히 구현 가능 🎯🚀
 
 💡 결론: "공구가 홈 안에 있는지 여부를 판단하는 것"은 실제 구현 가능한 로직이며, 정확도를 높일 수 있는 방법도 존재함! 🔥
+
+🚀 DB 담당자에게 설명할 때 핵심 포인트
+JSON 파일(tools.json, log.json)을 사용하던 부분을 DB(Tool 테이블, Log 테이블)로 변경해야 한다.
+공구의 대여/반납을 저장하는 update_tools_json()과 update_log_json()을 DB 업데이트 함수로 변경해야 한다.
+대여/반납 이벤트 발생 시(Missing → Detected), update_tools_json()과 update_log_json()을 update_tools_db()와 update_log_db()로 변경해야 한다
