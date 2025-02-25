@@ -7,8 +7,8 @@ class Tool(db.Model):
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True) # 식별 코드
-    tool_id = db.Column(db.Integer, db.ForeignKey('tool.id'), nullable=False)
-    tool = db.relationship('Tool', backref=db.backref('Log_set'))
+    tool_id = db.Column(db.Integer, db.ForeignKey('tool.id', ondelete='CASCADE'), nullable=False)
+    tool = db.relationship('Tool', backref=db.backref('Log_set', cascade='all, delete-orphan'))
     user_name = db.Column(db.String(100), nullable=False)
     rental_date = db.Column(db.DateTime(), nullable=False)
     return_date = db.Column(db.DateTime(), nullable=True)
