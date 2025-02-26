@@ -7,11 +7,11 @@
     {
         "id": 2,
         "name": "Hammer",
-        "avail": false
+        "avail": true
     },
     {
         "id": 3,
         "name": "Spanner",
-        "avail": false
+        "avail": true
     }
 ]

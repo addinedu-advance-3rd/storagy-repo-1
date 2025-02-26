@@ -15,6 +15,7 @@ class MainManager:
 
     def run_object_detection(self):
         object_detector = ObjectDetect(self.latest_worker)
+        object_detector.Tool_init() # 추가
         object_detector.detect_objects()
 
     def start_processes(self):
