@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 10
+names: ['AdjustableClamptrack_idkeyframe', 'Bolttrack_idkeyframe', 'Hosetrack_idkeyframe', 'LuggageTagtrack_idkeyframe', 'MetalSheettrack_idkeyframe', 'Nailtrack_idkeyframe', 'Nuttrack_idkeyframe', 'Pliertrack_idkeyframe', 'Washertrack_idkeyframe', 'Wrenchtrack_idkeyframe']
+
+roboflow:
+  workspace: fod-detection
+  project: fod-ia5dn
+  version: 6
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/fod-detection/fod-ia5dn/dataset/6
