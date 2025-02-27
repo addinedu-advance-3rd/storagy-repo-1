@@ -1,6 +1,6 @@
 import multiprocessing
-from face_detect import FaceDetect
-from tools_detect_test import ObjectDetect
+from .face_detect import FaceDetect
+from .tools_detect_test import ObjectDetect
 
 class MainManager:
     def __init__(self):
@@ -15,7 +15,6 @@ class MainManager:
 
     def run_object_detection(self):
         object_detector = ObjectDetect(self.latest_worker)
-        object_detector.Tool_init() # 추가
         object_detector.detect_objects()
 
     def start_processes(self):

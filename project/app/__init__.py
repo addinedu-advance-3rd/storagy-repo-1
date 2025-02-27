@@ -4,6 +4,9 @@ from flask_sqlalchemy import SQLAlchemy
 
 import config
 
+from cv import main
+import threading
+
 db = SQLAlchemy()
 migrate = Migrate()
 
@@ -23,8 +26,19 @@ def create_app():
     app.register_blueprint(log_views.bp)
     app.register_blueprint(call_views.bp)
     
-    # 필터
+    # Filter
     from .filter import format_datetime
     app.jinja_env.filters['datetime'] = format_datetime
 
+    # CV
+    manager = main.MainManager()
+
+    def start_manager():
+        manager.start_processes()
+        manager.face_process.join()
+        manager.object_process.join()
+
+    # Start the manager in a separate thread
+    threading.Thread(target=start_manager, daemon=True).start()
+    
     return app
