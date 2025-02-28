@@ -7,13 +7,11 @@ from ultralytics import YOLO
 import json
 import numpy as np
 
-
-
 # 🔹 YOLO 로그 메시지를 끄기 위한 설정
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 class ObjectDetect:
-    def __init__(self, latest_worker, cam_index=2, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
+    def __init__(self, latest_worker, app, cam_index=2, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
     , lost_frame_count=45, detected_frame_count=45):
         """
         객체 감지를 수행하는 클래스
@@ -48,61 +46,43 @@ class ObjectDetect:
         self.detected_frame_count = detected_frame_count
 
 #################데이터 저장 및 로드 #####################
-        #Tool을 json으로 init, 처음에만
-        self.tools_json_path = "/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/db/tools.json"
-        self.db = None
-        self.Tool = None
-        self.db_init()
-        
+        self.app = app
+        from app import db
+        from app.models import Tool, Log
+        self.db = db
+        self.Tool = Tool
+        self.Log = Log
+
 
     # Tool
-    def is_Tool_empty(self):
-        with app.app_context():
-            return self.db.session.query().count() == 0
-
-    def Tool_init(self):
-        if self.is_Tool_empty():
-            tools = self.load_json(self.tools_json_path)
-            for tool in tools:
-                new_tool = self.Tool(name=tool['name'], avail=tool['avail'])
-                self.db.session.add(new_tool)
-            self.db.session.commit()
-
     def update_Tool(self, tool_name, avail):
         """ Tool의 avail 상태 업데이트 """
-        tool_ = self.Tool.query.filter_by(name=tool_name).first()
+        tool = self.Tool.query.filter_by(name=tool_name).first()
         # id가 더 바람직
-        if tool_:
-            tool_.avail = avail
+        if tool:
+            tool.avail = avail
             self.db.session.commit()
 
     # Log
-    def create_log(tool_name, user_name, rental_time):
+    def create_log(self, tool_name, user_name, rental_date):
         """ 대여 """
-        tool = Tool.query.filter_by(name=tool_name).first()
-        new_log = Log(tool_id=tool.id, user_name=user_name, rental_time=rental_time)
-        db.session.add(new_log)
-        db.session.commit()
+        tool = self.Tool.query.filter_by(name=tool_name).first()
+        if tool is None :
+            print('응 나는 도구를 찾지 못했어')
+        else :
+            print('도구 찾았다')
+            new_log = self.Log(tool_id=tool.id, user_name=user_name, rental_date=rental_date)
+            self.db.session.add(new_log)
+            self.db.session.commit()
 
-    def fix_log(tool_name, return_time):
+    def fix_log(self, tool_name, return_date):
         """ 반납 """
-        tool = Tool.query.filter_by(name=tool_name).first()
-        log = Log.query.filter(Log.tool_id == tool.id, Log.return_date == None).first()
+        tool = self.Tool.query.filter_by(name=tool_name).first()
+        log = self.Log.query.filter(self.Log.tool_id == tool.id, self.Log.return_date == None).first()
         if log :
-            log.return_time = return_time
-            db.session.commit()
+            log.return_date = return_date
+            self.db.session.commit()
             print(tool_name, '반납 완료')
-
-    # DB
-    def db_init(self):
-        from app import db as db_new
-        from app.models import Log as Log_new, Tool as Tool_new
-
-
-
-        self.db = db_new
-        self.Tool = Tool_new
-        self.Tool_init()
 
 ################DB랑 합칠 때 포맷만 json-> db로 변경###########
 
@@ -122,11 +102,11 @@ class ObjectDetect:
             if self.detected_objects[obj] == self.lost_frame_count:
                 self.confirmed_state[obj] = "Detected"
                 if self.rental_times[obj]:  # 대여 상태였다면 반납 시간 기록
-                    self.return_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    self.return_times[obj] = datetime.now()
             elif self.detected_objects[obj] == 0:
                 self.confirmed_state[obj] = "Missing"
                 if self.rental_times[obj] is None:  # ✅ 처음 사라질 때만 기록
-                    self.rental_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    self.rental_times[obj] = datetime.now()
                 self.return_times[obj] = None  # 아직 반납되지 않음
 
             # 🔹 상태 변화 확인 후 이벤트 발생 (같은 상태에서는 중복 실행 X)
@@ -136,16 +116,18 @@ class ObjectDetect:
 
                 # 대여 발생
                 if self.confirmed_state[obj] == "Missing":
-                    self.update_Tool(obj, False)
-                    self.create_log(self.last_user, self.rental_times[obj])
-                    print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")
+                    with self.app.app_context():
+                        self.update_Tool(obj, False)
+                        self.create_log(obj, self.last_user, self.rental_times[obj])
+                        print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")
 
                 # 반납 발생
                 else:
-                    self.return_times[obj] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    self.update_Tool(obj, True)
-                    self.fix_log(obj, self.return_times[obj])
-                    print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}")
+                    with self.app.app_context():
+                        self.return_times[obj] = datetime.now()
+                        self.update_Tool(obj, True)
+                        self.fix_log(obj, self.return_times[obj])
+                        print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}")
 
             self.previous_state[obj] = self.confirmed_state[obj]  # 이전 상태 업데이트
 
