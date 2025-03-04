@@ -10,7 +10,7 @@ model = YOLO("runs/detect/fod_ver1/weights/best.pt")
 target_classes = [1, 5, 6]  # Sheet(4) 없음
 
 # ✅ 웹캠 열기
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("http://192.168.0.6:5000/video_feed")
 if not cap.isOpened():
     print("❌ 웹캠을 열 수 없습니다.")
     exit()
@@ -28,7 +28,7 @@ while cap.isOpened():
         break
 
     # ✅ YOLO 감지 수행 (❗ 특정 클래스만 감지)
-    results = model(frame, conf=0.1, classes=target_classes)
+    results = model(frame, conf=0.2, classes=target_classes)
 
     # ✅ 현재 프레임에서 감지된 객체 추적
     current_objects = set()
