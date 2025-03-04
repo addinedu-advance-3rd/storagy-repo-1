@@ -4,15 +4,16 @@ import logging
 import time
 from datetime import datetime
 from ultralytics import YOLO
-import json
 import numpy as np
+
+from flask import current_app
 
 # 🔹 YOLO 로그 메시지를 끄기 위한 설정
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 class ObjectDetect:
-    def __init__(self, latest_worker, app, cam_index=2, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
-    , lost_frame_count=45, detected_frame_count=45):
+    def __init__(self, latest_worker, cam_index=9, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
+    , lost_frame_count=60, detected_frame_count=60):
         """
         객체 감지를 수행하는 클래스
         - latest_worker: 최근 감지된 사용자를 공유하는 변수
@@ -46,13 +47,14 @@ class ObjectDetect:
         self.detected_frame_count = detected_frame_count
 
 #################데이터 저장 및 로드 #####################
-        self.app = app
-        from app import db
+        self.app = current_app # 잘 가져오는가?
+        from app import db, socketio
         from app.models import Tool, Log
         self.db = db
+        self.socketio = socketio
         self.Tool = Tool
         self.Log = Log
-
+        # 구조개선필요
 
     # Tool
     def update_Tool(self, tool_name, avail):
@@ -62,7 +64,9 @@ class ObjectDetect:
         if tool:
             tool.avail = avail
             self.db.session.commit()
-
+            self.socketio.emit("tool-update", {'data': 'Hello from server!'}, to=None)
+            print('소켓 emit')
+        
     # Log
     def create_log(self, tool_name, user_name, rental_date):
         """ 대여 """
@@ -74,6 +78,7 @@ class ObjectDetect:
             new_log = self.Log(tool_id=tool.id, user_name=user_name, rental_date=rental_date)
             self.db.session.add(new_log)
             self.db.session.commit()
+            #self.socketio.emit('log-update')
 
     def fix_log(self, tool_name, return_date):
         """ 반납 """
@@ -82,6 +87,7 @@ class ObjectDetect:
         if log :
             log.return_date = return_date
             self.db.session.commit()
+            #self.socketio.emit('log-update')
             print(tool_name, '반납 완료')
 
 ################DB랑 합칠 때 포맷만 json-> db로 변경###########

@@ -1,15 +1,14 @@
 from flask import Flask
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-
+from flask_socketio import SocketIO
 import config
-
-import threading
-from cv import main
 import json
 
 db = SQLAlchemy()
 migrate = Migrate()
+socketio = SocketIO()
+
 tools_json_path = "/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/db/tools.json"
 
 def create_app():
@@ -21,6 +20,9 @@ def create_app():
     migrate.init_app(app, db)
     from .models import Tool, Log
 
+    print('앱 시작')
+
+    # DB 세팅
     def is_Tool_empty():
         return db.session.query(Tool).count() == 0
 
@@ -42,18 +44,14 @@ def create_app():
     app.register_blueprint(log_views.bp)
     app.register_blueprint(call_views.bp)
     
+    # Websocket
+    socketio.init_app(app)
+    print('소켓-앱 합체!')
+
     # Filter
     from .filter import format_datetime
     app.jinja_env.filters['datetime'] = format_datetime
 
-    # CV
-    manager = main.MainManager(app)
-    def start_manager():
-        manager.start_processes()
-        manager.face_process.join()
-        manager.object_process.join()
-    threading.Thread(target=start_manager, daemon=True).start()
-    
     return app
 
 def load_json(path):

@@ -30,4 +30,17 @@
         </tbody>
     </table>
 </div>
+<form id="toollistForm" method="get" action="{{ url_for('tool._list') }}"></form>
+{% endblock %}
+{% block script %}
+<script>
+    const socket = io();
+    socket.on("connect", (cb) => {
+        console.log('서버에 연결되었습니다.');
+    });
+    socket.on("tool-update", function(data) {
+        console.log('Received tool-update:', data);
+        document.getElementById('toollistForm').submit();
+    });
+</script>
 {% endblock %}

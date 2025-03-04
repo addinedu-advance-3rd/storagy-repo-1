@@ -17,11 +17,12 @@
 {% block content %}
 {% endblock %}
 <!-- 기본 템플릿 안에 삽입될 내용 End -->
-
-<!-- jQuery 추가 -->
+<!-- jQuery -->
 <script src="{{ url_for('static', filename='jquery-3.7.1.min.js') }}"></script>
- <!-- Bootstrap JS -->
+<!-- Bootstrap JS -->
 <script src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
+<!-- Socket.IO -->
+<script src="{{ url_for('static', filename='socket.io.min.js') }}"></script>
 <!-- 자바스크립트 Start -->
 {% block script %}
 {% endblock %}

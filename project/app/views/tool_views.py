@@ -7,7 +7,7 @@ bp = Blueprint('tool', __name__, url_prefix='/tool')
 
 @bp.route('/list/')
 def _list():
-    tool_list = Tool.query.order_by(Tool.id.asc()).all() or [] # 고민
+    tool_list = Tool.query.order_by(Tool.id.asc()).all()
     return render_template('tool/tool_list.html', tool_list=tool_list)
 
 # CREATE: 새로운 Tool 추가

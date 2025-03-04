@@ -106,5 +106,11 @@ btn_search.addEventListener('click', function() {
     document.getElementById('page').value = 1; // 검색버튼을 클릭할 경우 1페이지부터 조회한다.
     document.getElementById('searchForm').submit();
 });
+const socket = io();
+    socket.on('log-update', function() {
+        document.getElementById('kw').value = document.getElementById('search_kw').value;
+        document.getElementById('page').value = this.dataset.page;
+        document.getElementById('searchForm').submit();
+    });
 </script>
 {% endblock %}
