@@ -20,8 +20,6 @@ def create_app():
     migrate.init_app(app, db)
     from .models import Tool, Log
 
-    print('앱 시작')
-
     # DB 세팅
     def is_Tool_empty():
         return db.session.query(Tool).count() == 0
@@ -33,9 +31,9 @@ def create_app():
                 new_tool = Tool(name=tool['name'], avail=tool['avail'])
                 db.session.add(new_tool)
             db.session.commit()
-
+    
     with app.app_context():
-        Tool_init() # 위치 고민
+        Tool_init()
 
     # Blueprint
     from .views import main_views, tool_views, log_views, call_views
@@ -46,7 +44,6 @@ def create_app():
     
     # Websocket
     socketio.init_app(app)
-    print('소켓-앱 합체!')
 
     # Filter
     from .filter import format_datetime

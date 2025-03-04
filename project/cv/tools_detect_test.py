@@ -7,12 +7,13 @@ from ultralytics import YOLO
 import numpy as np
 
 from flask import current_app
+from flask_socketio import emit
 
 # 🔹 YOLO 로그 메시지를 끄기 위한 설정
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 class ObjectDetect:
-    def __init__(self, latest_worker, cam_index=9, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
+    def __init__(self, latest_worker, cam_index=3, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
     , lost_frame_count=60, detected_frame_count=60):
         """
         객체 감지를 수행하는 클래스
@@ -64,7 +65,9 @@ class ObjectDetect:
         if tool:
             tool.avail = avail
             self.db.session.commit()
-            self.socketio.emit("tool-update", {'data': 'Hello from server!'}, to=None)
+            # self.socketio.emit("tool-update", {'data': 'Hello from server!'}, to=None)
+            with self.app.app_context():
+                emit("tool-update", {'data': 'Hello from server!'}, broadcast=True)
             print('소켓 emit')
         
     # Log
