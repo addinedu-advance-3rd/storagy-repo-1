@@ -13,7 +13,10 @@ from flask_socketio import emit
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 class ObjectDetect:
-    def __init__(self, latest_worker, cam_index=3, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
+    def __init__(self, latest_worker
+                #  , cam_index=3
+                 , cam_index=0 #test
+                 , model_path="/home/addinedu/dev_ws/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
     , lost_frame_count=60, detected_frame_count=60):
         """
         객체 감지를 수행하는 클래스
@@ -65,10 +68,14 @@ class ObjectDetect:
         if tool:
             tool.avail = avail
             self.db.session.commit()
-            # self.socketio.emit("tool-update", {'data': 'Hello from server!'}, to=None)
-            with self.app.app_context():
-                emit("tool-update", {'data': 'Hello from server!'}, broadcast=True)
-            print('소켓 emit')
+            # 명확한 데이터 구조로 이벤트 발생
+            self.socketio.emit("tool-update", {
+                'tool_id': tool.id,
+                'tool_name': tool_name,
+                'avail': avail,
+                'timestamp': str(datetime.now())
+            }, namespace='/')
+            print(f'소켓 emit: tool-update - {tool_name} 상태 변경: {avail}')
         
     # Log
     def create_log(self, tool_name, user_name, rental_date):
@@ -128,6 +135,13 @@ class ObjectDetect:
                     with self.app.app_context():
                         self.update_Tool(obj, False)
                         self.create_log(obj, self.last_user, self.rental_times[obj])
+                        # 로그 업데이트 이벤트 추가 (명확한 데이터 구조)
+                        self.socketio.emit('log-update', {
+                            'tool_name': obj,
+                            'action': 'rental',
+                            'user': self.last_user,
+                            'timestamp': str(self.rental_times[obj])
+                        }, namespace='/')
                         print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")
 
                 # 반납 발생
@@ -136,6 +150,13 @@ class ObjectDetect:
                         self.return_times[obj] = datetime.now()
                         self.update_Tool(obj, True)
                         self.fix_log(obj, self.return_times[obj])
+                        # 로그 업데이트 이벤트 추가 (명확한 데이터 구조)
+                        self.socketio.emit('log-update', {
+                            'tool_name': obj,
+                            'action': 'return',
+                            'user': self.last_user,
+                            'timestamp': str(self.return_times[obj])
+                        }, namespace='/')
                         print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}")
 
             self.previous_state[obj] = self.confirmed_state[obj]  # 이전 상태 업데이트

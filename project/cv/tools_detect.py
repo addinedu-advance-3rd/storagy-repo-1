@@ -11,8 +11,9 @@ import numpy as np
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 class ObjectDetect:
-    def __init__(self, latest_worker, cam_index=2, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
-    , lost_frame_count=45, detected_frame_count=45):
+    def __init__(self, latest_worker, cam_index=2
+                 , model_path="/home/addinedu/dev_ws/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
+                 , lost_frame_count=45, detected_frame_count=45, tools_status=None):
         """
         객체 감지를 수행하는 클래스
         - latest_worker: 최근 감지된 사용자를 공유하는 변수
@@ -20,6 +21,7 @@ class ObjectDetect:
         - model_path: YOLO 모델 경로 (Instance Segmentation)
         - lost_frame_count: 객체가 사라졌다고 판단할 연속 감지 실패 프레임 수
         - detected_frame_count: 감지 또는 사라짐 상태를 유지해야 하는 최소 프레임 수
+        - tools_status: 공구 상태를 저장할 공유 딕셔너리
         """
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = YOLO(model_path).to(self.device)
@@ -28,6 +30,7 @@ class ObjectDetect:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.latest_worker = latest_worker  # FaceDetect의 감지 결과 공유
+        self.tools_status = tools_status  # 공유 딕셔너리 추가
         self.detected_objects = {"Spanner": lost_frame_count, "Hammer": lost_frame_count, "Driver": lost_frame_count}  # 감지 상태 프레임 카운트
         self.last_user = "Unknown User"
         self.previous_state = {"Spanner": "Missing", "Hammer": "Missing", "Driver": "Missing"}  # 이전 상태 저장
@@ -37,8 +40,8 @@ class ObjectDetect:
         self.return_times = {"Spanner": None, "Hammer": None, "Driver": None}  # 반납 시간 저장
 
         # JSON 경로 설정
-        self.tools_json_path = "db/tools.json"
-        self.log_json_path = "db/log.json"
+        self.tools_json_path = "/home/addinedu/dev_ws/storagy-repo-1/project/cv/db/tools.json"
+        self.log_json_path = "/home/addinedu/dev_ws/storagy-repo-1/project/cv/db/log.json"
 
         # 🔹 감지할 클래스 지정 (spanner: 67, hammer: 39, driver: 64)
         self.target_classes = {0: "Driver", 1: "Hammer", 2: "Spanner"}  # 모델 내 클래스 인덱스 사용
@@ -122,6 +125,14 @@ class ObjectDetect:
                 if self.confirmed_state[obj] == "Missing":
                     self.update_tools_json(obj, False)  # tools.json에서 avail = False
                     print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")
+                    
+                    # 공유 딕셔너리 업데이트
+                    if self.tools_status is not None:
+                        self.tools_status[obj] = {
+                            'status': 'Missing',
+                            'user': self.last_user,
+                            'rental_time': self.rental_times[obj]
+                        }
 
                 # 반납 발생
                 else:
@@ -129,6 +140,14 @@ class ObjectDetect:
                     self.update_tools_json(obj, True)  # tools.json에서 avail = True
                     self.update_log_json(obj, self.last_user, self.rental_times[obj], self.return_times[obj])  # log.json 업데이트
                     print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}")
+                    
+                    # 공유 딕셔너리 업데이트
+                    if self.tools_status is not None:
+                        self.tools_status[obj] = {
+                            'status': 'Detected',
+                            'user': self.last_user,
+                            'return_time': self.return_times[obj]
+                        }
 
             self.previous_state[obj] = self.confirmed_state[obj]  # 이전 상태 업데이트
 

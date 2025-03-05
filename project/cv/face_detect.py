@@ -9,7 +9,7 @@ from torchvision import transforms
 
 #얼굴 인식만 하는 클래스 json에서 데이터 로드
 class FaceDetect:
-    IMG_SRC_FOLDER = "/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/img_src"
+    IMG_SRC_FOLDER = "storagy-repo-1/project/cv/img_src"
     METADATA_PATH = os.path.join(IMG_SRC_FOLDER, "face_metadata.json")  # 얼굴 메타데이터 경로
 
     def __init__(self,latest_worker):

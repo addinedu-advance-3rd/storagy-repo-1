@@ -2,16 +2,16 @@
     {
         "id": 1,
         "name": "Driver",
-        "avail": true
+        "avail": false
     },
     {
         "id": 2,
         "name": "Hammer",
-        "avail": true
+        "avail": false
     },
     {
         "id": 3,
         "name": "Spanner",
-        "avail": true
+        "avail": false
     }
 ]

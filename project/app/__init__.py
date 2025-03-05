@@ -8,6 +8,7 @@ import json
 db = SQLAlchemy()
 migrate = Migrate()
 socketio = SocketIO()
+main_manager = None  # MainManager 인스턴스를 저장할 전역 변수
 
 tools_json_path = "/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/db/tools.json"
 
@@ -45,9 +46,27 @@ def create_app():
     # Websocket
     socketio.init_app(app)
 
+    # 멀티프로세스 관리자 초기화
+    from cv.main import MainManager
+    global main_manager
+    main_manager = MainManager()
+    
+    # 애플리케이션 종료 시 프로세스 정리
+    @app.teardown_appcontext
+    def cleanup_processes(exception=None):
+        global main_manager
+        if main_manager:
+            main_manager.stop_processes()
+
     # Filter
     from .filter import format_datetime
     app.jinja_env.filters['datetime'] = format_datetime
+
+    # 소켓 이벤트 핸들러 추가
+    @socketio.on('test_message')
+    def handle_test_message(data):
+        print('테스트 메시지 수신:', data)
+        socketio.emit('test_response', {'response': '서버에서 응답합니다', 'received': data})
 
     return app
 
