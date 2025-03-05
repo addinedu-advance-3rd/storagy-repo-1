@@ -37,3 +37,4 @@ src/face_detect/face_metadata.json
 
 build/
 log/
+install/
