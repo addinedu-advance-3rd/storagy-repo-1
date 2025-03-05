@@ -1,9 +1,0 @@
-source;share/circle/hook/pythonpath.ps1
-source;share/circle/hook/pythonpath.dsv
-source;share/circle/hook/pythonpath.sh
-source;share/circle/hook/ament_prefix_path.ps1
-source;share/circle/hook/ament_prefix_path.dsv
-source;share/circle/hook/ament_prefix_path.sh
-source;../../build/circle/share/circle/hook/pythonpath_develop.ps1
-source;../../build/circle/share/circle/hook/pythonpath_develop.dsv
-source;../../build/circle/share/circle/hook/pythonpath_develop.sh
