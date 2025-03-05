@@ -1,0 +1,17 @@
+[
+    {
+        "id": 1,
+        "name": "Driver",
+        "avail": true
+    },
+    {
+        "id": 2,
+        "name": "Hammer",
+        "avail": true
+    },
+    {
+        "id": 3,
+        "name": "Spanner",
+        "avail": true
+    }
+]

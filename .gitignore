@@ -1,3 +1,8 @@
+.idea
+pybo.db
+*.pyc
+__pycache__
+
 # Ignore specific model weight files
 src/face_detect/weights/age_model_weights.h5
 src/face_detect/weights/gender_model_weights.h5

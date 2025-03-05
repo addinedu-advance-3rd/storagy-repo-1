@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container my-3">
+    <table class="table">
+        <thead>
+        <tr class="table-dark">
+            <th>코드</th>
+            <th>공구</th>
+            <th>상태</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if tool_list %}
+        {% for tool in tool_list %}
+        <tr>
+            <td>{{ tool.id }}</td>
+            <td>{{ tool.name }}</td>
+            <td>
+                <span class="badge {{ 'bg-success' if tool.avail else 'bg-danger' }}">
+                    {{ '사용 가능' if tool.avail else '사용 중' }}
+                </span>
+            </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="3">공구가 없습니다.</td>
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+<form id="toollistForm" method="get" action="{{ url_for('tool._list') }}"></form>
+{% endblock %}
+{% block script %}
+<script>
+    const socket = io();
+    socket.on("connect", function() {
+        console.log('서버에 연결되었습니다.');
+    });
+    socket.on("tool-update", function(data) {
+        console.log('Received tool-update:', data);
+        document.getElementById('toollistForm').submit();
+    });
+</script>
+{% endblock %}
