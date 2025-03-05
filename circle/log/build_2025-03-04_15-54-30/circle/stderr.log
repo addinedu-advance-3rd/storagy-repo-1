@@ -1,5 +1,0 @@
-  File "/home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/aruco_dock.py", line 53
-    self.cmtx = calib_data['camMatrix']  # camera matrix
-    ^^^^
-SyntaxError: expected 'except' or 'finally' block
-
