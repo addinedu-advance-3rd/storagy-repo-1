@@ -1,0 +1,41 @@
+[0.647s] Invoking command in '/home/storagy/circle/src/circle': PYTHONPATH=/home/storagy/circle/build/circle/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/storagy/circle/install/circle/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/circle build --build-base /home/storagy/circle/build/circle/build install --record /home/storagy/circle/build/circle/install.log --single-version-externally-managed install_data
+[0.882s] running egg_info
+[0.882s] writing ../../build/circle/circle.egg-info/PKG-INFO
+[0.883s] writing dependency_links to ../../build/circle/circle.egg-info/dependency_links.txt
+[0.883s] writing entry points to ../../build/circle/circle.egg-info/entry_points.txt
+[0.884s] writing requirements to ../../build/circle/circle.egg-info/requires.txt
+[0.884s] writing top-level names to ../../build/circle/circle.egg-info/top_level.txt
+[0.887s] reading manifest file '../../build/circle/circle.egg-info/SOURCES.txt'
+[0.888s] writing manifest file '../../build/circle/circle.egg-info/SOURCES.txt'
+[0.888s] running build
+[0.888s] running build_py
+[0.888s] copying circle/aruco_dock.py -> /home/storagy/circle/build/circle/build/lib/circle
+[0.889s] copying circle/send_home.py -> /home/storagy/circle/build/circle/build/lib/circle
+[0.889s] copying circle/nested_aruco_dock.py -> /home/storagy/circle/build/circle/build/lib/circle
+[0.889s] copying circle/test_calib_capture.py -> /home/storagy/circle/build/circle/build/lib/circle
+[0.889s] copying circle/send_goal.py -> /home/storagy/circle/build/circle/build/lib/circle
+[0.889s] running install
+[0.890s] running install_lib
+[0.891s] copying /home/storagy/circle/build/circle/build/lib/circle/aruco_dock.py -> /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle
+[0.892s] copying /home/storagy/circle/build/circle/build/lib/circle/send_home.py -> /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle
+[0.892s] copying /home/storagy/circle/build/circle/build/lib/circle/nested_aruco_dock.py -> /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle
+[0.892s] copying /home/storagy/circle/build/circle/build/lib/circle/test_calib_capture.py -> /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle
+[0.892s] copying /home/storagy/circle/build/circle/build/lib/circle/send_goal.py -> /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle
+[0.893s] byte-compiling /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/aruco_dock.py to aruco_dock.cpython-310.pyc
+[0.894s] byte-compiling /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/send_home.py to send_home.cpython-310.pyc
+[0.895s] byte-compiling /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/nested_aruco_dock.py to nested_aruco_dock.cpython-310.pyc
+[0.896s] byte-compiling /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/test_calib_capture.py to test_calib_capture.cpython-310.pyc
+[0.896s] byte-compiling /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/send_goal.py to send_goal.cpython-310.pyc
+[0.897s] running install_data
+[0.897s] copying launch/ekf_localization.launch.py -> /home/storagy/circle/install/circle/share/circle/launch
+[0.897s] running install_egg_info
+[0.899s] removing '/home/storagy/circle/install/circle/lib/python3.10/site-packages/circle-0.0.0-py3.10.egg-info' (and everything under it)
+[0.900s] Copying ../../build/circle/circle.egg-info to /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle-0.0.0-py3.10.egg-info
+[0.901s] running install_scripts
+[0.923s] Installing arrival_listener script to /home/storagy/circle/install/circle/lib/circle
+[0.923s] Installing aruco_dock script to /home/storagy/circle/install/circle/lib/circle
+[0.923s] Installing detect_aruco script to /home/storagy/circle/install/circle/lib/circle
+[0.923s] Installing mission_handler script to /home/storagy/circle/install/circle/lib/circle
+[0.923s] Installing send_goal script to /home/storagy/circle/install/circle/lib/circle
+[0.924s] writing list of installed files to '/home/storagy/circle/build/circle/install.log'
+[0.944s] Invoked command in '/home/storagy/circle/src/circle' returned '0': PYTHONPATH=/home/storagy/circle/build/circle/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/storagy/circle/install/circle/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/circle build --build-base /home/storagy/circle/build/circle/build install --record /home/storagy/circle/build/circle/install.log --single-version-externally-managed install_data

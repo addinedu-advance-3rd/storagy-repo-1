@@ -1,0 +1,4 @@
+  File "/home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/aruco_dock.py", line 49
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+SyntaxError: expected 'except' or 'finally' block
+

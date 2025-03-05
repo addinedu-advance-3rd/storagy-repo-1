@@ -1,0 +1,8 @@
+[console_scripts]
+arrival_listener = circle.arrival_listener:main
+aruco_dock = circle.aruco_dock:main
+detect_aruco = circle.detect_aruco:main
+docking = circle.docking:main
+mission_handler = circle.mission_handler:main
+send_goal = circle.send_goal:main
+

@@ -1,0 +1,21 @@
+[0.756s] Invoking command in '/home/storagy/circle/build/circle': PYTHONPATH=/home/storagy/circle/build/circle/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/storagy/circle/install/circle/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/storagy/circle/build/circle/build --no-deps symlink_data
+[1.074s] running develop
+[1.270s] running egg_info
+[1.270s] writing circle.egg-info/PKG-INFO
+[1.271s] writing dependency_links to circle.egg-info/dependency_links.txt
+[1.271s] writing entry points to circle.egg-info/entry_points.txt
+[1.271s] writing requirements to circle.egg-info/requires.txt
+[1.271s] writing top-level names to circle.egg-info/top_level.txt
+[1.273s] reading manifest file 'circle.egg-info/SOURCES.txt'
+[1.273s] writing manifest file 'circle.egg-info/SOURCES.txt'
+[1.275s] running build_ext
+[1.275s] Creating /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle.egg-link (link to .)
+[1.276s] Installing arrival_listener script to /home/storagy/circle/install/circle/lib/circle
+[1.276s] Installing aruco_dock script to /home/storagy/circle/install/circle/lib/circle
+[1.276s] Installing detect_aruco script to /home/storagy/circle/install/circle/lib/circle
+[1.276s] Installing mission_handler script to /home/storagy/circle/install/circle/lib/circle
+[1.276s] Installing send_goal script to /home/storagy/circle/install/circle/lib/circle
+[1.276s] 
+[1.277s] Installed /home/storagy/circle/build/circle
+[1.277s] running symlink_data
+[1.322s] Invoked command in '/home/storagy/circle/build/circle' returned '0': PYTHONPATH=/home/storagy/circle/build/circle/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/storagy/circle/install/circle/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/storagy/circle/build/circle/build --no-deps symlink_data

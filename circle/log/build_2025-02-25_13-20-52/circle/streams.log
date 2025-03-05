@@ -1,0 +1,28 @@
+[0.615s] Invoking command in '/home/storagy/circle/src/circle': PYTHONPATH=/home/storagy/circle/build/circle/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/storagy/circle/install/circle/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/circle build --build-base /home/storagy/circle/build/circle/build install --record /home/storagy/circle/build/circle/install.log --single-version-externally-managed install_data
+[0.841s] running egg_info
+[0.842s] writing ../../build/circle/circle.egg-info/PKG-INFO
+[0.842s] writing dependency_links to ../../build/circle/circle.egg-info/dependency_links.txt
+[0.842s] writing entry points to ../../build/circle/circle.egg-info/entry_points.txt
+[0.842s] writing requirements to ../../build/circle/circle.egg-info/requires.txt
+[0.842s] writing top-level names to ../../build/circle/circle.egg-info/top_level.txt
+[0.844s] reading manifest file '../../build/circle/circle.egg-info/SOURCES.txt'
+[0.845s] writing manifest file '../../build/circle/circle.egg-info/SOURCES.txt'
+[0.845s] running build
+[0.845s] running build_py
+[0.845s] copying circle/base_BasicNavigator.py -> /home/storagy/circle/build/circle/build/lib/circle
+[0.845s] copying circle/arrival_listener.py -> /home/storagy/circle/build/circle/build/lib/circle
+[0.845s] running install
+[0.846s] running install_lib
+[0.847s] copying /home/storagy/circle/build/circle/build/lib/circle/base_BasicNavigator.py -> /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle
+[0.847s] copying /home/storagy/circle/build/circle/build/lib/circle/arrival_listener.py -> /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle
+[0.848s] byte-compiling /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/base_BasicNavigator.py to base_BasicNavigator.cpython-310.pyc
+[0.849s] byte-compiling /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle/arrival_listener.py to arrival_listener.cpython-310.pyc
+[0.849s] running install_data
+[0.850s] copying launch/circle_launch.py -> /home/storagy/circle/install/circle/share/circle/launch
+[0.850s] running install_egg_info
+[0.851s] removing '/home/storagy/circle/install/circle/lib/python3.10/site-packages/circle-0.0.0-py3.10.egg-info' (and everything under it)
+[0.851s] Copying ../../build/circle/circle.egg-info to /home/storagy/circle/install/circle/lib/python3.10/site-packages/circle-0.0.0-py3.10.egg-info
+[0.852s] running install_scripts
+[0.870s] Installing mission_handler script to /home/storagy/circle/install/circle/lib/circle
+[0.870s] writing list of installed files to '/home/storagy/circle/build/circle/install.log'
+[0.888s] Invoked command in '/home/storagy/circle/src/circle' returned '0': PYTHONPATH=/home/storagy/circle/build/circle/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/storagy/circle/install/circle/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/circle build --build-base /home/storagy/circle/build/circle/build install --record /home/storagy/circle/build/circle/install.log --single-version-externally-managed install_data
