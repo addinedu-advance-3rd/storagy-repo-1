@@ -15,6 +15,9 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 # 웹소켓 클라이언트 연결을 저장할 세트
 connected_clients = set()
 
+# Flask-SocketIO 통합을 위한 콜백 함수
+robot_pose_callback = None
+
 class MapHTTPHandler(BaseHTTPRequestHandler):
     map_image = None  # 지도 이미지를 저장할 클래스 변수
     
@@ -57,7 +60,7 @@ class MapVisualizer(Node):
     def __init__(self):
         super().__init__('map_visualizer')
         # 1. map.yaml 파일 로드 및 메타데이터 추출
-        yaml_file_path = "/home/storagy/circle/room_11.yaml"
+        yaml_file_path = "/home/addinedu/dev_ws/storagy-repo-1/circle/room_11.yaml"
         with open(yaml_file_path, 'r') as f:
             self.map_meta = yaml.safe_load(f)
         self.resolution = self.map_meta['resolution']     # m/pixel
@@ -98,6 +101,9 @@ class MapVisualizer(Node):
         
         # HTTP 서버 시작
         self.start_http_server()
+        
+        # Flask-SocketIO 통합을 위한 콜백 설정
+        self.flask_socketio_callback = None
 
     def start_websocket_server(self):
         # 웹소켓 서버 시작 함수
@@ -185,7 +191,7 @@ class MapVisualizer(Node):
     
     def send_robot_pose(self, robot_x, robot_y, pixel_x, pixel_y, yaw_deg):
         # 웹소켓으로 로봇 위치 데이터 전송
-        if not connected_clients:
+        if not connected_clients and not self.flask_socketio_callback:
             return
         
         # 전송할 데이터 준비
@@ -198,8 +204,13 @@ class MapVisualizer(Node):
             'yaw_deg': yaw_deg
         }
         
-        # 비동기 이벤트 루프에 전송 작업 추가
-        asyncio.run_coroutine_threadsafe(self._send_to_all_clients(json.dumps(data)), self.loop)
+        # Flask-SocketIO 콜백이 설정되어 있으면 호출
+        if self.flask_socketio_callback:
+            self.flask_socketio_callback(data)
+        
+        # 기존 웹소켓 클라이언트에도 전송
+        if connected_clients:
+            asyncio.run_coroutine_threadsafe(self._send_to_all_clients(json.dumps(data)), self.loop)
     
     async def _send_to_all_clients(self, message):
         # 모든 연결된 클라이언트에 메시지 전송
@@ -209,9 +220,18 @@ class MapVisualizer(Node):
                 return_exceptions=True
             )
 
+    # Flask-SocketIO 콜백 설정 메서드 추가
+    def set_flask_socketio_callback(self, callback):
+        self.flask_socketio_callback = callback
+
 def main(args=None):
     rclpy.init(args=args)
     node = MapVisualizer()
+    
+    # 전역 변수로 노드 인스턴스 저장 (Flask 앱에서 접근할 수 있도록)
+    global map_visualizer
+    map_visualizer = node
+    
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
@@ -220,6 +240,17 @@ def main(args=None):
         node.destroy_node()
         rclpy.shutdown()
         cv2.destroyAllWindows()
+
+# 전역 변수로 MapVisualizer 인스턴스 저장
+map_visualizer = None
+
+# Flask 앱에서 호출할 함수 - 콜백 설정
+def set_robot_pose_callback(callback):
+    global map_visualizer
+    if map_visualizer:
+        map_visualizer.set_flask_socketio_callback(callback)
+        return True
+    return False
 
 if __name__ == '__main__':
     main()

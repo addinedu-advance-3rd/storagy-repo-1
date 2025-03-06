@@ -537,5 +537,12 @@
         "user_name": "Unknown User",
         "rental_date": "2025-03-05 19:37:11",
         "return_date": "2025-03-05 19:38:22"
+    },
+    {
+        "id": 78,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-06 15:57:44",
+        "return_date": "2025-03-06 15:59:42"
     }
 ]

@@ -19,6 +19,7 @@ sys.path.append(CIRCLE_PATH)
 manager_thread = None
 map_thread = None
 manager = None  # MainManager 인스턴스
+map_visualizer = None  # MapVisualizer 인스턴스
 
 def start_manager():
     global manager
@@ -36,18 +37,44 @@ def start_manager():
 def start_map_server():
     # map_to_web 모듈 동적 로드
     try:
-        from circle.circle.map_to_web import main as map_main
-        map_main()
+        # ROS2 초기화 및 MapVisualizer 노드 생성
+        import rclpy
+        from circle.circle.map_to_web import MapVisualizer
+        
+        global map_visualizer
+        
+        # ROS2 초기화 (이미 초기화되었다면 무시됨)
+        if not rclpy.ok():
+            rclpy.init()
+        
+        # MapVisualizer 노드 생성
+        map_visualizer = MapVisualizer()
+        
+        # ROS2 스핀 (블로킹 호출)
+        rclpy.spin(map_visualizer)
     except ImportError as e:
         print(f"지도 서버 모듈 로드 실패: {e}")
     except Exception as e:
         print(f"지도 서버 실행 중 오류 발생: {e}")
+    finally:
+        # 종료 시 정리
+        if map_visualizer:
+            map_visualizer.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 def signal_handler(sig, frame):
-    global manager, manager_thread, map_thread
+    global manager, manager_thread, map_thread, map_visualizer
     print("신호를 받아 종료합니다...")
     if manager:
         manager.stop_processes()
+    if map_visualizer:
+        # 지도 서버 정리
+        import rclpy
+        if rclpy.ok():
+            map_visualizer.destroy_node()
+            rclpy.shutdown()
+    
     if manager_thread:
         manager_thread.join(timeout=5)
     if map_thread:
@@ -65,11 +92,11 @@ if __name__ == "__main__":
             # socketio 객체를 MainManager에 전달
             manager = main.MainManager(socketio=socketio)
             # 백그라운드 작업을 별도 스레드로 실행
-            manager_thread = threading.Thread(target=start_manager)
+            manager_thread = threading.Thread(target=start_manager, daemon=True)
             manager_thread.start()
             
-            # 지도 서버 시작
-            map_thread = threading.Thread(target=start_map_server)
+            # 지도 서버 시작 (daemon=True로 설정하여 메인 스레드 종료 시 자동 종료)
+            map_thread = threading.Thread(target=start_map_server, daemon=True)
             map_thread.start()
             
             # Flask-SocketIO 서버 실행

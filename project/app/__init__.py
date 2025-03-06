@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, current_app
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
@@ -68,6 +68,33 @@ def create_app():
     def handle_test_message(data):
         print('테스트 메시지 수신:', data)
         socketio.emit('test_response', {'response': '서버에서 응답합니다', 'received': data})
+
+    # 지도 서버와 통합 (before_first_request 대신 첫 번째 요청 시 실행되는 함수 등록)
+    def setup_map_integration():
+        try:
+            from circle.circle.map_to_web import set_robot_pose_callback
+            from app.views.map_views import forward_robot_pose
+            
+            # 지도 서버의 로봇 위치 업데이트를 Flask-SocketIO로 전달하는 콜백 설정
+            success = set_robot_pose_callback(forward_robot_pose)
+            if success:
+                print("지도 서버와 Flask-SocketIO 통합 성공")
+            else:
+                print("지도 서버와 Flask-SocketIO 통합 실패: 지도 서버가 아직 초기화되지 않았습니다")
+        except ImportError as e:
+            print(f"지도 서버 모듈 로드 실패: {e}")
+        except Exception as e:
+            print(f"지도 서버 통합 중 오류 발생: {e}")
+    
+    # 첫 번째 요청 시 실행될 함수 등록
+    @app.route('/setup-map', methods=['GET'])
+    def trigger_setup_map():
+        setup_map_integration()
+        return "지도 서버 통합 설정 완료"
+    
+    # 또는 앱 시작 시 직접 호출
+    with app.app_context():
+        setup_map_integration()
 
     return app
 
