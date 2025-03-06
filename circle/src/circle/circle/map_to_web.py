@@ -19,6 +19,9 @@ class MapHTTPHandler(BaseHTTPRequestHandler):
     map_image = None  # 지도 이미지를 저장할 클래스 변수
     
     def do_GET(self):
+        # CORS 헤더 추가
+        self.send_header('Access-Control-Allow-Origin', '*')
+        
         if self.path == '/':
             # HTML 페이지 제공
             self.send_response(200)
@@ -35,6 +38,7 @@ class MapHTTPHandler(BaseHTTPRequestHandler):
             if MapHTTPHandler.map_image is not None:
                 self.send_response(200)
                 self.send_header('Content-type', 'image/png')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 
                 # OpenCV 이미지를 PNG로 인코딩하여 전송
@@ -42,9 +46,11 @@ class MapHTTPHandler(BaseHTTPRequestHandler):
                 self.wfile.write(img_encoded.tobytes())
             else:
                 self.send_response(404)
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
         else:
             self.send_response(404)
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
 
 class MapVisualizer(Node):

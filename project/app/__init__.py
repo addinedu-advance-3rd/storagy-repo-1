@@ -37,11 +37,12 @@ def create_app():
         Tool_init()
 
     # Blueprint
-    from .views import main_views, tool_views, log_views, call_views
+    from .views import main_views, tool_views, log_views, call_views, map_views
     app.register_blueprint(main_views.bp)
     app.register_blueprint(tool_views.bp)
     app.register_blueprint(log_views.bp)
     app.register_blueprint(call_views.bp)
+    app.register_blueprint(map_views.bp)
     
     # Websocket
     socketio.init_app(app)
