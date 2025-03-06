@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로봇 위치 지도</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+        }
+        #map-container {
+            position: relative;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+        }
+        #map-image {
+            display: block;
+        }
+        #robot-marker {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: red;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #robot-direction {
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background-color: blue;
+            transform-origin: left center;
+        }
+        #status {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>로봇 위치 지도</h1>
+    <div id="status">연결 중...</div>
+    <div id="map-container">
+        <img id="map-image" src="/map-image" alt="지도 이미지">
+        <div id="robot-marker"></div>
+        <div id="robot-direction"></div>
+    </div>
+
+    <script>
+        // 웹소켓 연결
+        const socket = new WebSocket(`ws://${window.location.hostname}:8765`);
+        const statusElement = document.getElementById('status');
+        const robotMarker = document.getElementById('robot-marker');
+        const robotDirection = document.getElementById('robot-direction');
+        const mapContainer = document.getElementById('map-container');
+        const mapImage = document.getElementById('map-image');
+
+        // 웹소켓 이벤트 핸들러
+        socket.onopen = function() {
+            statusElement.textContent = '연결됨';
+            statusElement.style.backgroundColor = '#d4edda';
+        };
+
+        socket.onclose = function() {
+            statusElement.textContent = '연결 끊김';
+            statusElement.style.backgroundColor = '#f8d7da';
+        };
+
+        socket.onerror = function() {
+            statusElement.textContent = '연결 오류 발생';
+            statusElement.style.backgroundColor = '#f8d7da';
+        };
+
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            // 로봇 위치 업데이트
+            if (data.type === 'robot_pose') {
+                // 픽셀 좌표로 로봇 마커 위치 설정
+                robotMarker.style.left = `${data.pixel_x}px`;
+                robotMarker.style.top = `${data.pixel_y}px`;
+                
+                // 로봇 방향 표시
+                const directionLength = 20; // 방향 표시 길이
+                robotDirection.style.left = `${data.pixel_x}px`;
+                robotDirection.style.top = `${data.pixel_y}px`;
+                robotDirection.style.width = `${directionLength}px`;
+                robotDirection.style.transform = `rotate(${data.yaw_deg}deg)`;
+                
+                // 상태 업데이트
+                statusElement.textContent = `로봇 위치: x=${data.robot_x.toFixed(2)}m, y=${data.robot_y.toFixed(2)}m`;
+            }
+        };
+
+        // 지도 이미지 로드 완료 시 컨테이너 크기 조정
+        mapImage.onload = function() {
+            mapContainer.style.width = `${mapImage.width}px`;
+            mapContainer.style.height = `${mapImage.height}px`;
+        };
+    </script>
+</body>
+</html>
