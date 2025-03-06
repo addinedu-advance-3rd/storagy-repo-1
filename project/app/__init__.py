@@ -7,7 +7,7 @@ import json
 
 db = SQLAlchemy()
 migrate = Migrate()
-socketio = SocketIO()
+socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet')
 main_manager = None  # MainManager 인스턴스를 저장할 전역 변수
 
 tools_json_path = "/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/db/tools.json"

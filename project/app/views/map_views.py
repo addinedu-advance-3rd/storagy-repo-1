@@ -8,8 +8,77 @@ import threading
 import io
 from PIL import Image
 import numpy as np
+import rclpy
+from rclpy.node import Node
+from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
 bp = Blueprint('map', __name__, url_prefix='/map')
+
+# 전역 변수
+map_image_data = None
+robot_position = {'x': 0, 'y': 0, 'theta': 0}
+ros_initialized = False
+ros_node = None
+
+# ROS 2 노드 클래스
+class MapNode(Node):
+    def __init__(self):
+        super().__init__('web_map_node')
+        self.map_subscription = self.create_subscription(
+            OccupancyGrid,
+            '/map',
+            self.map_callback,
+            10)
+        self.pose_subscription = self.create_subscription(
+            PoseWithCovarianceStamped,
+            '/amcl_pose',
+            self.pose_callback,
+            10)
+        self.get_logger().info('Map node initialized')
+
+    def map_callback(self, msg):
+        global map_image_data
+        self.get_logger().info('Map received')
+        
+        # OccupancyGrid를 이미지로 변환
+        width = msg.info.width
+        height = msg.info.height
+        data = np.array(msg.data).reshape(height, width)
+        
+        # -1(unknown)은 회색, 0(free)은 흰색, 100(occupied)은 검은색으로 변환
+        rgb_data = np.zeros((height, width, 3), dtype=np.uint8)
+        rgb_data[data == -1] = [128, 128, 128]  # 회색
+        rgb_data[data == 0] = [255, 255, 255]   # 흰색
+        rgb_data[data == 100] = [0, 0, 0]       # 검은색
+        
+        # PIL Image로 변환
+        pil_image = Image.fromarray(rgb_data)
+        
+        # 바이트 스트림으로 변환
+        img_byte_arr = io.BytesIO()
+        pil_image.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        
+        # 전역 변수 업데이트
+        map_image_data = img_byte_arr.getvalue()
+        
+        # 웹소켓으로 지도 업데이트 알림
+        socketio.emit('map_updated', namespace='/map')
+
+    def pose_callback(self, msg):
+        global robot_position
+        pose = msg.pose.pose
+        
+        # 로봇 위치 업데이트
+        robot_position = {
+            'x': pose.position.x,
+            'y': pose.position.y,
+            'theta': 2 * np.arctan2(pose.orientation.z, pose.orientation.w)
+        }
+        
+        # 웹소켓으로 위치 정보 전송
+        forward_robot_pose(robot_position)
 
 # 기본 지도 이미지 생성 (검은색 배경에 격자무늬)
 def create_default_map_image(width=800, height=600):
@@ -47,9 +116,48 @@ def create_default_map_image(width=800, height=600):
     
     return img_byte_arr.getvalue()
 
-# 지도 상태 저장용 변수
-map_image_data = create_default_map_image()
-robot_position = {'x': 0, 'y': 0, 'theta': 0}
+# ROS 2 노드 실행 함수
+def run_ros_node():
+    global ros_initialized, ros_node
+    try:
+        if not ros_initialized:
+            rclpy.init()
+            ros_initialized = True
+        
+        ros_node = MapNode()
+        rclpy.spin(ros_node)
+    except Exception as e:
+        print(f"ROS 노드 실행 중 오류 발생: {str(e)}")
+    finally:
+        if ros_node is not None:
+            ros_node.destroy_node()
+
+# 애플리케이션 시작 시 ROS 노드 시작
+def start_ros_node():
+    global map_image_data
+    # 기본 지도 이미지 생성
+    map_image_data = create_default_map_image()
+    
+    # ROS 노드 스레드 시작
+    ros_thread = threading.Thread(target=run_ros_node, daemon=True)
+    ros_thread.start()
+
+# 애플리케이션 종료 시 ROS 종료
+def shutdown_ros():
+    global ros_initialized
+    if ros_initialized:
+        try:
+            rclpy.shutdown()
+            ros_initialized = False
+        except Exception as e:
+            print(f"ROS 종료 중 오류 발생: {str(e)}")
+
+# 애플리케이션 시작 시 ROS 노드 시작
+start_ros_node()
+
+# 애플리케이션 종료 시 ROS 종료 등록
+import atexit
+atexit.register(shutdown_ros)
 
 @bp.route('/')
 def view():
@@ -60,6 +168,12 @@ def view():
 def map_image():
     try:
         global map_image_data
+        
+        if map_image_data is None:
+            map_image_data = create_default_map_image()
+        
+        # 디버깅 로그 추가
+        print(f"지도 이미지 요청 처리: {len(map_image_data)} 바이트")
         
         return Response(
             map_image_data,
@@ -72,7 +186,12 @@ def map_image():
         )
     except Exception as e:
         print(f"지도 이미지 처리 에러: {str(e)}")
-        return "지도 이미지를 가져올 수 없습니다.", 404
+        # 오류 발생 시 기본 이미지 반환
+        default_image = create_default_map_image()
+        return Response(
+            default_image,
+            content_type='image/png'
+        )
 
 # 지도 이미지 업데이트 API (다른 시스템에서 호출 가능)
 @bp.route('/update-map', methods=['POST'])

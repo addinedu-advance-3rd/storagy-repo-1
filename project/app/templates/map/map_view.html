@@ -28,7 +28,7 @@
 {% endblock %}
 
 {% block script %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script src="{{ url_for('static', filename='socket.io.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const mapContainer = document.getElementById('map-container');
@@ -57,11 +57,21 @@
         
         socket.on('robot_pose', function(data) {
             console.log('로봇 위치 데이터 수신:', data);
+
+            // 데이터가 없거나 필수 속성이 없는 경우 기본값 설정
+            const robotData = {
+                robot_x: 0,
+                robot_y: 0,
+                yaw_deg: 0,
+                pixel_x: 0,
+                pixel_y: 0,
+                ...data
+            };
             
             // 로봇 위치 정보 업데이트
-            robotX.textContent = data.robot_x.toFixed(2);
-            robotY.textContent = data.robot_y.toFixed(2);
-            robotYaw.textContent = data.yaw_deg.toFixed(2);
+            robotX.textContent = robotData.robot_x.toFixed(2);
+            robotY.textContent = robotData.robot_y.toFixed(2);
+            robotYaw.textContent = robotData.yaw_deg.toFixed(2);
             
             // 지도 이미지 위에 로봇 마커 표시
             const imgRect = mapImage.getBoundingClientRect();
@@ -70,8 +80,8 @@
             const scaleX = imgRect.width / mapImage.naturalWidth;
             const scaleY = imgRect.height / mapImage.naturalHeight;
             
-            const markerX = data.pixel_x * scaleX;
-            const markerY = data.pixel_y * scaleY;
+            const markerX = robotData.pixel_x * scaleX;
+            const markerY = robotData.pixel_y * scaleY;
             
             // 마커 위치 설정
             robotMarker.style.display = 'block';
@@ -80,7 +90,7 @@
             robotMarker.style.top = `${markerY - 10}px`;
             
             // 방향 표시선 회전
-            const radians = data.yaw_deg * Math.PI / 180;
+            const radians = robotData.yaw_deg * Math.PI / 180;
             const endX = 10 + 8 * Math.cos(radians);
             const endY = 10 - 8 * Math.sin(radians);
             directionLine.setAttribute('x2', endX);

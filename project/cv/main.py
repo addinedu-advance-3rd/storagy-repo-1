@@ -3,6 +3,7 @@ from .face_detect import FaceDetect
 from .tools_detect import ObjectDetect
 import time
 import threading
+import cv2
 
 class MainManager:
     def __init__(self, socketio=None):
@@ -61,15 +62,27 @@ class MainManager:
     def stop_processes(self):
         print("[INFO] Stopping processes...")
         self.running = False
-        if self.monitor_thread:
+        
+        # 모니터링 스레드 종료
+        if self.monitor_thread and self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=1.0)
-            
-        if self.face_process and self.face_process.is_alive():
-            self.face_process.terminate()
-            self.face_process.join()
-        if self.object_process and self.object_process.is_alive():
-            self.object_process.terminate()
-            self.object_process.join()
+        
+        # 얼굴 인식 프로세스 종료
+        if hasattr(self, 'face_process') and self.face_process and self.face_process.is_alive():
+            try:
+                self.face_process.terminate()
+                self.face_process.join(timeout=1.0)
+            except Exception as e:
+                print(f"[WARNING] Face process termination error: {e}")
+        
+        # 객체 감지 프로세스 종료
+        if hasattr(self, 'object_process') and self.object_process and self.object_process.is_alive():
+            try:
+                self.object_process.terminate()
+                self.object_process.join(timeout=1.0)
+            except Exception as e:
+                print(f"[WARNING] Object process termination error: {e}")
+        
         print("[INFO] Processes stopped.")
 
     def is_running(self):
@@ -78,6 +91,26 @@ class MainManager:
             (self.face_process and self.face_process.is_alive()) or 
             (self.object_process and self.object_process.is_alive())
         )
+
+    def init_camera(self, camera_index):
+        try:
+            cap = cv2.VideoCapture(camera_index)
+            if not cap.isOpened():
+                print(f"카메라 {camera_index}를 열 수 없습니다. 다른 인덱스 시도...")
+                # 다른 카메라 인덱스 시도
+                for i in range(10):  # 0부터 9까지 시도
+                    if i != camera_index:
+                        cap = cv2.VideoCapture(i)
+                        if cap.isOpened():
+                            print(f"대체 카메라 {i}를 사용합니다.")
+                            return cap
+                # 여전히 실패한 경우
+                print("사용 가능한 카메라를 찾을 수 없습니다.")
+                return None
+            return cap
+        except Exception as e:
+            print(f"카메라 초기화 중 오류: {e}")
+            return None
 
 if __name__ == "__main__":
     manager = MainManager()

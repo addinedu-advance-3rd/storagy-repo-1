@@ -86,19 +86,26 @@
             
             // 로봇 위치 업데이트
             if (data.type === 'robot_pose') {
-                // 픽셀 좌표로 로봇 마커 위치 설정
-                robotMarker.style.left = `${data.pixel_x}px`;
-                robotMarker.style.top = `${data.pixel_y}px`;
+                // 기본값과 함께 데이터 추출
+                const pixelX = data.pixel_x ?? 0;
+                const pixelY = data.pixel_y ?? 0;
+                const yawDeg = data.yaw_deg ?? 0;
+                const robotX = data.robot_x ?? 0;
+                const robotY = data.robot_y ?? 0;
+
+                // 로봇 마커 위치 설정
+                robotMarker.style.left = `${pixelX}px`;
+                robotMarker.style.top = `${pixelY}px`;
                 
                 // 로봇 방향 표시
-                const directionLength = 20; // 방향 표시 길이
-                robotDirection.style.left = `${data.pixel_x}px`;
-                robotDirection.style.top = `${data.pixel_y}px`;
+                const directionLength = 20;
+                robotDirection.style.left = `${pixelX}px`;
+                robotDirection.style.top = `${pixelY}px`;
                 robotDirection.style.width = `${directionLength}px`;
-                robotDirection.style.transform = `rotate(${data.yaw_deg}deg)`;
+                robotDirection.style.transform = `rotate(${yawDeg}deg)`;
                 
                 // 상태 업데이트
-                statusElement.textContent = `로봇 위치: x=${data.robot_x.toFixed(2)}m, y=${data.robot_y.toFixed(2)}m`;
+                statusElement.textContent = `로봇 위치: x=${robotX.toFixed(2)}m, y=${robotY.toFixed(2)}m`;
             }
         };
 
