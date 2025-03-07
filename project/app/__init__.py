@@ -7,7 +7,7 @@ import json
 
 db = SQLAlchemy()
 migrate = Migrate()
-socketio = SocketIO()
+#socketio = SocketIO()
 
 tools_json_path = "/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/db/tools.json"
 
@@ -43,11 +43,13 @@ def create_app():
     app.register_blueprint(call_views.bp)
     
     # Websocket
+    '''
     socketio.init_app(app, 
                       message_queue=config.SOCKETIO_MESSAGE_QUEUE,
                       async_mode='eventlet',
                       logger=True, engineio_logger=True
                       )
+    '''
 
     # Filter
     from .filter import format_datetime

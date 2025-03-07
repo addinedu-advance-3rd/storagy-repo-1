@@ -1,5 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
+#import eventlet
+#eventlet.monkey_patch()
 
 from app import create_app
 from cv import main
@@ -9,8 +9,8 @@ import atexit
 import os
 from flask_socketio import SocketIO
 
-socketio = SocketIO(message_queue='redis://')
 app = create_app()
+socketio = SocketIO(app)
 manager = None
 shutdown_event = threading.Event()
 
