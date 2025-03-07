@@ -3,11 +3,11 @@ import torch
 from ultralytics import YOLO
 from collections import defaultdict
 
-# ✅ YOLO 모델 로드
-model = YOLO("runs/detect/fod_ver1/weights/best.pt")
+# ✅ YOLO 기본 모델 (COCO 사전 훈련 모델) 로드
+model = YOLO("yolov8n.pt")
 
-# ✅ 특정 클래스만 감지 (Bolt, Nut, Nail)
-target_classes = [1, 5, 6]  # Sheet(4) 없음
+# ✅ 특정 클래스만 감지 (Mouse)
+target_classes = [64]  # COCO 데이터셋에서 'mouse' 클래스는 63번
 
 # ✅ 웹캠 열기
 cap = cv2.VideoCapture(0)
@@ -28,7 +28,7 @@ while cap.isOpened():
         break
 
     # ✅ YOLO 감지 수행 (❗ 특정 클래스만 감지)
-    results = model(frame, conf=0.1, classes=target_classes)
+    results = model(frame, conf=0.3, classes=target_classes)
 
     # ✅ 현재 프레임에서 감지된 객체 추적
     current_objects = set()
@@ -38,8 +38,8 @@ while cap.isOpened():
             x1, y1, x2, y2 = map(int, box.xyxy[0])  # 바운딩 박스 좌표
             class_id = int(box.cls[0])  # 클래스 ID
 
-            # ✅ 모든 감지된 객체를 "FOD"로 표기
-            label = "FOD"
+            # ✅ 감지된 객체를 "Mouse"로 표기
+            label = "Mouse"
 
             # ✅ 현재 감지된 객체 저장
             current_objects.add(label)
@@ -56,7 +56,7 @@ while cap.isOpened():
             detected_objects[obj]["count"] -= 1  # 유지 시간 감소
 
     # ✅ 화면 출력
-    cv2.imshow("FOD Detection - YOLOv8", frame)
+    cv2.imshow("Mouse Detection - YOLOv8", frame)
 
     # ✅ 'q' 키를 누르면 종료
     if cv2.waitKey(1) & 0xFF == ord('q'):

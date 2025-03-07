@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['FOD']
+
+roboflow:
+  workspace: new-workspace-jdteu
+  project: 0428parts
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/new-workspace-jdteu/0428parts/dataset/1
