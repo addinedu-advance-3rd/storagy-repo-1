@@ -34,7 +34,7 @@
 {% endblock %}
 {% block script %}
 <script>
-    const socket = io(window.location.origin);
+    const socket = io();
     
     socket.on("connect", function() {
         console.log('서버에 연결되었습니다!');

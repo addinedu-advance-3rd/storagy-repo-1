@@ -6,7 +6,7 @@ import torch
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from torchvision import transforms
 
-videoPath = '/dev/video3'
+videoPath = '/dev/video2'
 
 #얼굴 인식만 하는 클래스 json에서 데이터 로드
 class FaceDetect:
@@ -24,7 +24,8 @@ class FaceDetect:
         #얼굴비교모델 facenet
         self.facenet = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
         self.reference_embeddings = self.load_embeddings()  # 기존 얼굴 데이터 로드
-        self.latest_worker = latest_worker  # 공유 메모리 객체
+        with lock:
+            self.latest_worker = latest_worker  # 공유 메모리 객체
         self.last_valid_worker = None  # "No Match"가 아닐 때의 최근 사용자 저장
         # 공유자원 경합 방지
         self.lock = lock
@@ -104,11 +105,11 @@ class FaceDetect:
                         self.last_valid_worker = best_match
 
                     # 사용자 바뀔 때 상태 출력
-                    if frame_count % 15 == 0 and self.latest_worker.value != self.last_valid_worker:
-                        with self.lock:
+                    with self.lock:
+                        if frame_count % 15 == 0 and self.latest_worker.value != self.last_valid_worker:
                             self.latest_worker.value = self.last_valid_worker if self.last_valid_worker is not None else "No Match"
-                        print(f"🔹 최근 감지된 사용자: {self.latest_worker.value}")
-                    
+                            print(f"🔹 최근 감지된 사용자: {self.latest_worker.value}")
+                        
                     frame_count += 1
 
                     #바운딩 박스 및 텍스트 표시

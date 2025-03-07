@@ -1,17 +1,13 @@
-from gevent import monkey
-monkey.patch_all()
+import eventlet
+eventlet.monkey_patch()
 
-from multiprocessing import freeze_support
-from app import create_app
+from app import create_app, socketio
 from cv import main
 import threading
 import signal
 import atexit
 import os
-from flask_socketio import SocketIO
-from config import SOCKETIO_MESSAGE_QUEUE
 
-socketio = SocketIO(message_queue=SOCKETIO_MESSAGE_QUEUE, async_mode='gevent')
 app = create_app()
 manager = None
 shutdown_event = threading.Event()
@@ -54,8 +50,6 @@ def signal_handler(sig, frame):
         os._exit(0)  # 강제 종료
 
 if __name__ == "__main__":
-    freeze_support()
-
     # 종료 시그널 핸들러 등록
     signal.signal(signal.SIGINT, signal_handler)
     #signal.signal(signal.SIGTERM, signal_handler)

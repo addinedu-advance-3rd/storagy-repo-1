@@ -5,8 +5,9 @@ from datetime import datetime
 from ultralytics import YOLO
 import numpy as np
 
-from app import create_app, db, socketio
+from app import db
 from app.models import Tool, Log
+from run import app, socketio
 
 videoPath = '/dev/video0'
 
@@ -14,7 +15,8 @@ videoPath = '/dev/video0'
 logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 class ObjectDetect:
-    def __init__(self, latest_worker, model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
+    def __init__(self, latest_worker, lock,
+                 model_path="/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
     , lost_frame_count=60, detected_frame_count=60):
         """
         객체 감지를 수행하는 클래스
@@ -26,13 +28,17 @@ class ObjectDetect:
         """
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = YOLO(model_path).to(self.device)
-        
+ 
+
         # 도구캠(필수라서 0)
         self.cap = cv2.VideoCapture(videoPath)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-        self.latest_worker = latest_worker  # FaceDetect의 감지 결과 공유
+        with lock:
+            self.latest_worker = latest_worker  # FaceDetect의 감지 결과 공유
+        self.lock = lock # 공유자원 경합 방지
+
         self.detected_objects = {"Spanner": lost_frame_count, "Hammer": lost_frame_count, "Driver": lost_frame_count}  # 감지 상태 프레임 카운트
         self.last_user = "Unknown User"
         self.previous_state = {"Spanner": "Missing", "Hammer": "Missing", "Driver": "Missing"}  # 이전 상태 저장
@@ -40,23 +46,20 @@ class ObjectDetect:
         self.state_count = {"Spanner": 0, "Hammer": 0, "Driver": 0}  # 감지 연속 프레임 카운트
         self.rental_times = {"Spanner": None, "Hammer": None, "Driver": None}  # 대여 시간 저장
         self.return_times = {"Spanner": None, "Hammer": None, "Driver": None}  # 반납 시간 저장
-
         # JSON 경로 설정
         self.tools_json_path = "db/tools.json"
         self.log_json_path = "db/log.json"
-
         # 🔹 감지할 클래스 지정 (spanner: 67, hammer: 39, driver: 64)
         self.target_classes = {0: "Driver", 1: "Hammer", 2: "Spanner"}  # 모델 내 클래스 인덱스 사용
         self.lost_frame_count = lost_frame_count
         self.detected_frame_count = detected_frame_count
 
         #################데이터 저장 및 로드 #####################
-        self.app = create_app()
 
     # Tool
     def update_Tool(self, tool_name, avail):
         """Tool의 avail 상태 업데이트"""
-        with self.app.app_context():
+        with app.app_context():
             tool = Tool.query.filter_by(name=tool_name).first()
             # id가 더 바람직
             if tool:
@@ -68,7 +71,7 @@ class ObjectDetect:
     # Log
     def create_log(self, tool_name, user_name, rental_date):
         """대여"""
-        with self.app.app_context():
+        with app.app_context():
             tool = Tool.query.filter_by(name=tool_name).first()
             if tool is None:
                 print("응 나는 도구를 찾지 못했어")
@@ -83,7 +86,7 @@ class ObjectDetect:
 
     def fix_log(self, tool_name, return_date):
         """반납"""
-        with self.app.app_context():
+        with app.app_context():
             tool = Tool.query.filter_by(name=tool_name).first()
             log = Log.query.filter(
                 Log.tool_id == tool.id, Log.return_date == None
@@ -122,7 +125,8 @@ class ObjectDetect:
             # 🔹 상태 변화 확인 후 이벤트 발생 (같은 상태에서는 중복 실행 X)
             if self.previous_state[obj] != self.confirmed_state[obj]:
                 prev_user = self.last_user
-                self.last_user = self.latest_worker.value if self.latest_worker.value != "No Match" else "Unknown User"
+                with self.lock:
+                    self.last_user = self.latest_worker.value if self.latest_worker.value != "No Match" else "Unknown User"
 
                 # 대여 발생
                 if self.confirmed_state[obj] == "Missing":

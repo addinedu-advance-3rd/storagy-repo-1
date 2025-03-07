@@ -4,8 +4,7 @@ from .tools_detect_test import ObjectDetect
 
 class MainManager:
     def __init__(self):
-        ctx = multiprocessing.get_context('spawn')
-        self.manager = ctx.Manager()
+        self.manager = multiprocessing.Manager()
         self.latest_worker = self.manager.Value("s", "No Match")  # 공유 메모리 생성 (초기값: "No Match")
         self.stop_event = multiprocessing.Event()
         self.face_process = None
@@ -18,7 +17,7 @@ class MainManager:
         face_detector.recognize_face(self.stop_event)
 
     def run_object_detection(self):
-        object_detector = ObjectDetect(self.latest_worker)
+        object_detector = ObjectDetect(self.latest_worker, self.lock)
         object_detector.detect_objects(self.stop_event)
 
     def start_processes(self):

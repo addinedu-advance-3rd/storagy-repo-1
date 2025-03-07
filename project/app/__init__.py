@@ -43,7 +43,9 @@ def create_app():
     app.register_blueprint(call_views.bp)
     
     # Websocket
-    socketio.init_app(app, message_queue=config.SOCKETIO_MESSAGE_QUEUE, async_mode='gevent')
+    socketio.init_app(app, 
+                      message_queue='redis://', 
+                      )
 
     # Filter
     from .filter import format_datetime
