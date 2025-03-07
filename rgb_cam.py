@@ -89,7 +89,7 @@ class FODDetector:
                 # ✅ 바운딩 박스 및 정보 표시
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, f"D: {distance:.2f} cm", (x1, y1 - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                cv2.putText(frame, f"Angle: {angle:.2f}°", (x1, y1 - 10), 
+                cv2.putText(frame, f"Angle: {angle:.2f}'", (x1, y1 - 10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
                 self.detected_objects[obj]["count"] -= 1  # 유지 시간 감소
