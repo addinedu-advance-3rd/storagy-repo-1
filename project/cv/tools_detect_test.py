@@ -65,7 +65,7 @@ class ObjectDetect:
             if tool:
                 tool.avail = avail
                 db.session.commit()
-                socketio.emit('tool-update', namespace='/')
+                socketio.emit("tool-update")
                 print("소켓 emit")
 
     # Log

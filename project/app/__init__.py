@@ -44,7 +44,9 @@ def create_app():
     
     # Websocket
     socketio.init_app(app, 
-                      message_queue='redis://', 
+                      message_queue=config.SOCKETIO_MESSAGE_QUEUE,
+                      async_mode='eventlet',
+                      logger=True, engineio_logger=True
                       )
 
     # Filter

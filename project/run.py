@@ -1,13 +1,15 @@
 import eventlet
 eventlet.monkey_patch()
 
-from app import create_app, socketio
+from app import create_app
 from cv import main
 import threading
 import signal
 import atexit
 import os
+from flask_socketio import SocketIO
 
+socketio = SocketIO(message_queue='redis://')
 app = create_app()
 manager = None
 shutdown_event = threading.Event()
@@ -48,6 +50,14 @@ def signal_handler(sig, frame):
     if sig == signal.SIGINT:
         print("[INFO] Force terminating process...")
         os._exit(0)  # 강제 종료
+
+@socketio.on('connect')
+def connect():
+    print('외부 소켓 연결됨')
+
+@socketio.on('disconnect')
+def disconnect(reason):
+    print('외부 소켓 끊김, reason:', reason)
 
 if __name__ == "__main__":
     # 종료 시그널 핸들러 등록
