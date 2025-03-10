@@ -10,7 +10,7 @@ from std_srvs.srv import Trigger
 from collections import deque
 from scipy.spatial.transform import Rotation as R
 from ament_index_python.packages import get_package_share_directory
-
+import math
 # Simple 1D Kalman Filter for smoothing the angle measurement
 class KalmanFilter:
     def __init__(self, initial_value=0.0, process_noise=1e-3, measurement_noise=1e-1, error_estimate=1.0):
@@ -40,17 +40,11 @@ class ArUcoDockingController(Node):
         
         # Load calibration data
         try:
-            package_dir = get_package_share_directory('circle')
-            calib_data_path = os.path.join(package_dir, 'vision/calib_data.npz')
-            calib_data = np.load(calib_data_path)
+            # package_dir = get_package_share_directory('circle')
+            calib_data = np.load( '/home/storagy/storagy-repo-1/circle/src/circle/vision/calib_data.npz')
+            print (f"✅ Calibration data loaded from {calib_data}")
         except FileNotFoundError as e:
-            try:
-                self.get_logger().info(f"❌ File not found: {calib_data_path}")
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                calib_data_path = os.path.join(current_dir, "circle/src/circle/vision/calib_data.npz")
-                calib_data = np.load(calib_data_path)
-            except FileNotFoundError as e:
-                raise FileNotFoundError(f"❌ File not found: {calib_data_path}")
+            print (f"❌ File not found: {calib_data}")
 
         self.cmtx = calib_data['camMatrix']  # camera matrix
         self.dist = calib_data['distCoeff']    # distortion coefficients
@@ -160,6 +154,8 @@ class ArUcoDockingController(Node):
 
         twist = Twist()
 
+        print (f"ids: {ids}")
+
         if ids is not None:
             print("########################################################")
             print("FOUND MARKER")
@@ -178,29 +174,54 @@ class ArUcoDockingController(Node):
             for i in range(len(ids)):
                 rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.1, self.cmtx, self.dist)
                 frame = cv2.drawFrameAxes(frame, self.cmtx, self.dist, rvec, tvec, 0.05)
-                distance = np.linalg.norm(tvec)
-                if distance < min_distance:
-                    min_distance = distance
-                    best_tvec = tvec
-                    best_rvec = rvec
-                    best_id = ids[i][0]
+                print (f"rvec: {rvec}")
+                print (f"tvec: {tvec}")
+                corner = corners[i].reshape((4,2))
+                x_coord = int(corner[0][0])
+                y_coord = int(corner[0][1])
 
-            if best_tvec is not None:
-                # Convert rotation vector to rotation matrix and then to Euler angles (in degrees)
-                R_matrix, _ = cv2.Rodrigues(best_rvec)
-                euler_angles_deg = self.rotation_matrix_to_euler_angles(R_matrix)
-                
-                # Use the pitch (index 1) for error calculation
-                print(f"euler_angles_deg: {euler_angles_deg[2]:.2f}")
-                angle_error = (euler_angles_deg[2]+90)
-                angle_error = self.normalized_angle_error(angle_error, 0.0)
-                print (f"Normalized angle error: {angle_error:.2f}")
+                # rvec → 회전 행렬 변환
+                R_matrix, _ = cv2.Rodrigues(rvec)
+                # 단순히 yaw (Z축 회전)만 고려 (회전 행렬에서 yaw는 arctan2(R[1,0], R[0,0])로 계산)
+                yaw = math.degrees(math.atan2(R_matrix[1, 0], R_matrix[0, 0]))
+                roll = math.degrees(math.atan2(R_matrix[2, 1], R_matrix[2, 2]))
+                pitch = math.degrees(math.atan2(R_matrix[2, 0], R_matrix[2, 2]))
 
-                
+                print (f"roll: {roll:.2f}, pitch: {pitch:.2f}, yaw: {yaw:.2f}")
+                # tvec: (1, 1, 3) 배열이므로 스칼라 값 추출
+                tvec_scalar = tvec[0][0]
+                # 일반적으로 전진 거리는 카메라 좌표계에서 Z축 (앞 방향)
+                distance = tvec_scalar[2]
 
-                # print (f"Euler angles: {euler_angles_deg[0]:.2f}, {euler_angles_deg[1]:.2f}, {euler_angles_deg[2]:.2f}")
-                
-                self.process_docking(best_tvec, best_rvec, best_id, twist, angle_error)
+                print (f"yaw: {yaw:.2f}, distance: {distance:.2f}")
+
+                if ids[i] == 0 :
+                    if distance < 0.85: 
+                        print ("회전 준비")
+                        twist.linear.x = 0.08
+                    else : 
+
+                    print (f"✅ Marker ID: {ids[i]}")
+                        print ("1차 방향 정렬 시작")
+                        if 180 - abs(pitch) > 20 : 
+                            if pitch > 0 : 
+                                twist.angular.z = 0.2
+                            else : 
+                                twist.angular.z = -0.2
+                        else :
+                            if 180 - abs(pitch) > 4 :
+                                if pitch > 0 : 
+                                    twist.angular.z = 0.08
+                                else : 
+                                    twist.angular.z = -0.08
+                            else : 
+                                twist.angular.z = 0.0
+                                print ("1차 직선 이동 시작")
+                                twist.linear.x = 0.08
+                            
+
+ 
+                # self.process_docking(best_tvec, best_rvec, best_id, twist, angle_error)
         else:
             twist.linear.x = 0.0
             twist.angular.z = 0.2

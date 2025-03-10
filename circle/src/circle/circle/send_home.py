@@ -37,13 +37,13 @@ class GoalSender(Node):
         goal_msg.pose.header.stamp.nanosec = 0  
 
         # 목표 좌표 설정
-        goal_msg.pose.pose.position.x = -2.074
-        goal_msg.pose.pose.position.y = 0.270
-        goal_msg.pose.pose.position.z = 0.065  
+        goal_msg.pose.pose.position.x = -0.284
+        goal_msg.pose.pose.position.y = 0.137
+        goal_msg.pose.pose.position.z = 0.0  
 
         # 방향 (Quaternion) 설정
-        goal_msg.pose.pose.orientation.z = -0.013
-        goal_msg.pose.pose.orientation.w = 1.000
+        goal_msg.pose.pose.orientation.z = -0.733
+        goal_msg.pose.pose.orientation.w = 0.679
 
         self.future = self.client.send_goal_async(goal_msg)
         self.future.add_done_callback(self.goal_response_callback)

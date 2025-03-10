@@ -29,6 +29,7 @@ setup(
             'detect_aruco = circle.detect_aruco:main',
             'aruco_dock = circle.aruco_dock:main',
             'docking = circle.docking:main',
+            'rotate90 = circle.rotate90:main',
             # 'navigation_client = circle.navigation_client:main',
             # 'base_BasicNavigator = circle.base_BasicNavigator:main',
         ],
