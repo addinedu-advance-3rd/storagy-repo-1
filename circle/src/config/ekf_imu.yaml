@@ -1,0 +1,13 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 30.0
+    two_d_mode: false
+    imu0: "/sick_tim_5xx/imu"
+    imu0_config: [false, false, false,   # x, y, z 위치 (IMU는 위치 정보 없음)
+                  true, true, true,      # roll, pitch, yaw 사용
+                  false, false, false,   # x, y, z 속도 (IMU에서는 사용 안 함)
+                  true, true, true,      # roll, pitch, yaw 속도 사용
+                  false, false, false]   # 가속도 (필요하면 true로 변경)
+    imu0_differential: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true
