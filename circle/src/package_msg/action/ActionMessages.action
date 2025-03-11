@@ -1,0 +1,10 @@
+# Goal (입력)
+string command  # "도착" 명령을 받음
+
+---
+# Result (출력)
+string result  # "완료" 메시지를 반환
+---
+
+# Feedback (중간 상태)
+string feedback  # 작업 진행 상태 메시지
