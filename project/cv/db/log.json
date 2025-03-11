@@ -1,0 +1,541 @@
+[
+    {
+        "id": 1,
+        "tool_id": 3,
+        "user_name": "Worker1",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:00:06"
+    },
+    {
+        "id": 2,
+        "tool_id": 2,
+        "user_name": "Worker1",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:00:06"
+    },
+    {
+        "id": 3,
+        "tool_id": 1,
+        "user_name": "Worker1",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:00:06"
+    },
+    {
+        "id": 4,
+        "tool_id": 1,
+        "user_name": "Worker1",
+        "rental_date": "2025-02-26 16:00:24",
+        "return_date": "2025-02-26 16:00:35"
+    },
+    {
+        "id": 5,
+        "tool_id": 3,
+        "user_name": "Worker1",
+        "rental_date": "2025-02-26 16:00:15",
+        "return_date": "2025-02-26 16:00:39"
+    },
+    {
+        "id": 6,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:01:16"
+    },
+    {
+        "id": 7,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:01:16"
+    },
+    {
+        "id": 8,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:01:16"
+    },
+    {
+        "id": 9,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:01:33"
+    },
+    {
+        "id": 10,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:01:33"
+    },
+    {
+        "id": 11,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-02-26 16:01:33"
+    },
+    {
+        "id": 12,
+        "tool_id": 3,
+        "user_name": "Worker1",
+        "rental_date": "2025-02-26 16:01:40",
+        "return_date": "2025-02-26 16:01:50"
+    },
+    {
+        "id": 13,
+        "tool_id": 2,
+        "user_name": "Worker1",
+        "rental_date": "2025-02-26 16:01:55",
+        "return_date": "2025-02-26 16:02:02"
+    },
+    {
+        "id": 14,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:51:16",
+        "return_date": "2025-03-05 18:51:20"
+    },
+    {
+        "id": 15,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:51:16",
+        "return_date": "2025-03-05 18:51:20"
+    },
+    {
+        "id": 16,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:51:16",
+        "return_date": "2025-03-05 18:51:50"
+    },
+    {
+        "id": 17,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 18:59:54"
+    },
+    {
+        "id": 18,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 18:59:54"
+    },
+    {
+        "id": 19,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:00:14"
+    },
+    {
+        "id": 20,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:02:46"
+    },
+    {
+        "id": 21,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:02:57"
+    },
+    {
+        "id": 22,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:03:08"
+    },
+    {
+        "id": 23,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:03:27"
+    },
+    {
+        "id": 24,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:03:57"
+    },
+    {
+        "id": 25,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:04:46"
+    },
+    {
+        "id": 26,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:04:46"
+    },
+    {
+        "id": 27,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:05:05"
+    },
+    {
+        "id": 28,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 18:59:47",
+        "return_date": "2025-03-05 19:05:11"
+    },
+    {
+        "id": 29,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:07:25"
+    },
+    {
+        "id": 30,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:07:25"
+    },
+    {
+        "id": 31,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:07:34",
+        "return_date": "2025-03-05 19:07:51"
+    },
+    {
+        "id": 32,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:08:00",
+        "return_date": "2025-03-05 19:08:02"
+    },
+    {
+        "id": 33,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:07:34",
+        "return_date": "2025-03-05 19:08:04"
+    },
+    {
+        "id": 34,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:12:33"
+    },
+    {
+        "id": 35,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:12:33"
+    },
+    {
+        "id": 36,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:12:38",
+        "return_date": "2025-03-05 19:12:40"
+    },
+    {
+        "id": 37,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:12:38",
+        "return_date": "2025-03-05 19:12:57"
+    },
+    {
+        "id": 38,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:17:56"
+    },
+    {
+        "id": 39,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:17:58"
+    },
+    {
+        "id": 40,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:17:57",
+        "return_date": "2025-03-05 19:18:06"
+    },
+    {
+        "id": 41,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:18:01",
+        "return_date": "2025-03-05 19:18:42"
+    },
+    {
+        "id": 42,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:18:40",
+        "return_date": "2025-03-05 19:18:47"
+    },
+    {
+        "id": 43,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:18:01",
+        "return_date": "2025-03-05 19:18:51"
+    },
+    {
+        "id": 44,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:17:57",
+        "return_date": "2025-03-05 19:18:51"
+    },
+    {
+        "id": 45,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:18:01",
+        "return_date": "2025-03-05 19:19:17"
+    },
+    {
+        "id": 46,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:18:40",
+        "return_date": "2025-03-05 19:20:37"
+    },
+    {
+        "id": 47,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:17:57",
+        "return_date": "2025-03-05 19:20:37"
+    },
+    {
+        "id": 48,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:18:01",
+        "return_date": "2025-03-05 19:20:51"
+    },
+    {
+        "id": 49,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:22:54"
+    },
+    {
+        "id": 50,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:22:55"
+    },
+    {
+        "id": 51,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:23:04",
+        "return_date": "2025-03-05 19:23:21"
+    },
+    {
+        "id": 52,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:23:21",
+        "return_date": "2025-03-05 19:23:24"
+    },
+    {
+        "id": 53,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:22:57",
+        "return_date": "2025-03-05 19:23:27"
+    },
+    {
+        "id": 54,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:23:21",
+        "return_date": "2025-03-05 19:23:45"
+    },
+    {
+        "id": 55,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:25:37"
+    },
+    {
+        "id": 56,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:25:38"
+    },
+    {
+        "id": 57,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:25:40",
+        "return_date": "2025-03-05 19:25:47"
+    },
+    {
+        "id": 58,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:25:40",
+        "return_date": "2025-03-05 19:25:59"
+    },
+    {
+        "id": 59,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:27:15",
+        "return_date": "2025-03-05 19:27:30"
+    },
+    {
+        "id": 60,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:27:15",
+        "return_date": "2025-03-05 19:27:38"
+    },
+    {
+        "id": 61,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:31:47",
+        "return_date": "2025-03-05 19:33:32"
+    },
+    {
+        "id": 62,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:31:47",
+        "return_date": "2025-03-05 19:33:40"
+    },
+    {
+        "id": 63,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:31:47",
+        "return_date": "2025-03-05 19:34:17"
+    },
+    {
+        "id": 64,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:31:47",
+        "return_date": "2025-03-05 19:34:23"
+    },
+    {
+        "id": 65,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:31:47",
+        "return_date": "2025-03-05 19:34:24"
+    },
+    {
+        "id": 66,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:31:47",
+        "return_date": "2025-03-05 19:35:31"
+    },
+    {
+        "id": 67,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:31:47",
+        "return_date": "2025-03-05 19:35:45"
+    },
+    {
+        "id": 68,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:37:06"
+    },
+    {
+        "id": 69,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-05 19:37:07"
+    },
+    {
+        "id": 70,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:37:11",
+        "return_date": "2025-03-05 19:37:24"
+    },
+    {
+        "id": 71,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:37:14",
+        "return_date": "2025-03-05 19:37:24"
+    },
+    {
+        "id": 72,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:37:08",
+        "return_date": "2025-03-05 19:37:43"
+    },
+    {
+        "id": 73,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:37:14",
+        "return_date": "2025-03-05 19:37:51"
+    },
+    {
+        "id": 74,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:37:08",
+        "return_date": "2025-03-05 19:38:05"
+    },
+    {
+        "id": 75,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:37:08",
+        "return_date": "2025-03-05 19:38:21"
+    },
+    {
+        "id": 76,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:37:14",
+        "return_date": "2025-03-05 19:38:21"
+    },
+    {
+        "id": 77,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-05 19:37:11",
+        "return_date": "2025-03-05 19:38:22"
+    }
+]
