@@ -20,30 +20,38 @@
             position: relative;
             margin-top: 20px;
             border: 1px solid #ccc;
+            width: 100%;
+            max-width: 800px; /* 최대 너비 설정 */
+            overflow: hidden;
         }
         #map-image {
             display: block;
+            width: 100%; /* 컨테이너에 맞게 이미지 크기 조정 */
+            height: auto;
         }
         #robot-marker {
             position: absolute;
-            width: 10px;
-            height: 10px;
+            width: 16px; /* 마커 크기 증가 */
+            height: 16px; /* 마커 크기 증가 */
             background-color: red;
             border-radius: 50%;
             transform: translate(-50%, -50%);
+            z-index: 10;
         }
         #robot-direction {
             position: absolute;
-            width: 20px;
-            height: 2px;
+            width: 30px; /* 방향 표시 길이 증가 */
+            height: 3px; /* 방향 표시 두께 증가 */
             background-color: blue;
             transform-origin: left center;
+            z-index: 9;
         }
         #status {
             margin-top: 10px;
             padding: 5px 10px;
             background-color: #f0f0f0;
             border-radius: 4px;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -52,61 +60,224 @@
     <div id="status">연결 중...</div>
     <div id="map-container">
         <img id="map-image" src="/map-image" alt="지도 이미지">
-        <div id="robot-marker"></div>
-        <div id="robot-direction"></div>
+        <!-- <img id="map-image" src="/map-image?no_cv=true" alt="지도 이미지"> -->
+        <div id="robot-marker" style="display:none;"></div>
+        <div id="robot-direction" style="display:none;"></div>
     </div>
 
     <script>
-        // 웹소켓 연결
-        const socket = new WebSocket(`ws://${window.location.hostname}:8765`);
+        // 웹소켓 연결 및 재연결 관리
+        let socket;
+        let reconnectInterval = 1000; // 초기 재연결 간격 (1초)
+        let maxReconnectInterval = 30000; // 최대 재연결 간격 (30초)
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 10; // 최대 재연결 시도 횟수
+        let pingInterval;
+        
         const statusElement = document.getElementById('status');
         const robotMarker = document.getElementById('robot-marker');
         const robotDirection = document.getElementById('robot-direction');
         const mapContainer = document.getElementById('map-container');
         const mapImage = document.getElementById('map-image');
-
-        // 웹소켓 이벤트 핸들러
-        socket.onopen = function() {
-            statusElement.textContent = '연결됨';
-            statusElement.style.backgroundColor = '#d4edda';
-        };
-
-        socket.onclose = function() {
-            statusElement.textContent = '연결 끊김';
-            statusElement.style.backgroundColor = '#f8d7da';
-        };
-
-        socket.onerror = function() {
-            statusElement.textContent = '연결 오류 발생';
-            statusElement.style.backgroundColor = '#f8d7da';
-        };
-
-        socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
+        
+        // 이미지 크기 조정 비율 계산을 위한 변수
+        let originalWidth = 0;
+        let originalHeight = 0;
+        let scaleRatio = 1;
+        
+        // 마지막으로 수신한 로봇 위치 데이터 저장
+        let lastRobotData = null;
+        
+        // 웹소켓 연결 함수
+        function connectWebSocket() {
+            // 이전 소켓이 있으면 정리
+            if (socket) {
+                socket.onopen = null;
+                socket.onclose = null;
+                socket.onerror = null;
+                socket.onmessage = null;
+                socket.close();
+            }
             
-            // 로봇 위치 업데이트
-            if (data.type === 'robot_pose') {
-                // 픽셀 좌표로 로봇 마커 위치 설정
-                robotMarker.style.left = `${data.pixel_x}px`;
-                robotMarker.style.top = `${data.pixel_y}px`;
+            // 현재 호스트 이름 가져오기
+            const host = window.location.hostname;
+            const port = 8765; // 웹소켓 포트
+            
+            // 새 웹소켓 연결 생성
+            console.log(`웹소켓 연결 시도: ws://${host}:${port}`);
+            socket = new WebSocket(`ws://${host}:${port}`);
+            
+            socket.onopen = function() {
+                console.log("웹소켓 연결됨");
+                statusElement.textContent = '연결됨';
+                statusElement.style.backgroundColor = '#d4edda';
                 
-                // 로봇 방향 표시
-                const directionLength = 20; // 방향 표시 길이
-                robotDirection.style.left = `${data.pixel_x}px`;
-                robotDirection.style.top = `${data.pixel_y}px`;
+                // 연결 성공 시 재연결 카운터 초기화
+                reconnectAttempts = 0;
+                reconnectInterval = 1000;
+                
+                // 연결 유지를 위한 핑 메시지 전송 (30초마다)
+                if (pingInterval) {
+                    clearInterval(pingInterval);
+                }
+                pingInterval = setInterval(function() {
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'ping' }));
+                    }
+                }, 30000);
+            };
+            
+            socket.onclose = function(event) {
+                console.log("웹소켓 연결 끊김", event);
+                statusElement.textContent = '연결 끊김 - 재연결 중...';
+                statusElement.style.backgroundColor = '#f8d7da';
+                
+                // 핑 인터벌 정리
+                if (pingInterval) {
+                    clearInterval(pingInterval);
+                }
+                
+                // 재연결 시도
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    setTimeout(function() {
+                        reconnectAttempts++;
+                        connectWebSocket();
+                        // 지수 백오프로 재연결 간격 증가
+                        reconnectInterval = Math.min(reconnectInterval * 1.5, maxReconnectInterval);
+                    }, reconnectInterval);
+                } else {
+                    statusElement.textContent = '연결 실패 - 페이지를 새로고침하세요';
+                }
+            };
+            
+            socket.onerror = function(error) {
+                console.error("웹소켓 오류:", error);
+                statusElement.textContent = '연결 오류 발생';
+                statusElement.style.backgroundColor = '#f8d7da';
+            };
+            
+            socket.onmessage = function(event) {
+                console.log("웹소켓 메시지 수신:", event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // 로봇 위치 업데이트
+                    if (data.type === 'robot_pose') {
+                        console.log("로봇 위치 데이터 수신:", data);
+                        
+                        // 데이터 저장
+                        lastRobotData = data;
+                        
+                        // 로봇 위치 업데이트
+                        updateRobotPosition(data);
+                    }
+                } catch (e) {
+                    console.error("메시지 처리 오류:", e);
+                }
+            };
+        }
+        
+        // 로봇 위치 업데이트 함수
+        function updateRobotPosition(data) {
+            // 마커와 방향 표시 요소 표시
+            robotMarker.style.display = 'block';
+            robotDirection.style.display = 'block';
+            
+            // 서버에서 받은 이미지 크기 정보가 있으면 사용
+            if (data.img_width && data.img_height) {
+                // 서버 이미지 크기와 현재 표시 이미지 크기의 비율 계산
+                const widthRatio = mapImage.width / data.img_width;
+                const heightRatio = mapImage.height / data.img_height;
+                
+                // 이미지 크기 조정 비율 적용
+                const scaledX = data.pixel_x * widthRatio;
+                const scaledY = data.pixel_y * heightRatio;
+                
+                console.log(`서버 이미지 크기: ${data.img_width}x${data.img_height}`);
+                console.log(`현재 이미지 크기: ${mapImage.width}x${mapImage.height}`);
+                console.log(`너비 비율: ${widthRatio}, 높이 비율: ${heightRatio}`);
+                console.log(`원본 픽셀 좌표: (${data.pixel_x}, ${data.pixel_y})`);
+                console.log(`조정된 픽셀 좌표: (${scaledX}, ${scaledY})`);
+                
+                // 픽셀 좌표로 로봇 마커 위치 설정
+                robotMarker.style.left = `${scaledX}px`;
+                robotMarker.style.top = `${scaledY}px`;
+                
+                // 로봇 방향 표시 (시계방향 +90도 보정)
+                const directionLength = 30; // 방향 표시 길이
+                robotDirection.style.left = `${scaledX}px`;
+                robotDirection.style.top = `${scaledY}px`;
                 robotDirection.style.width = `${directionLength}px`;
-                robotDirection.style.transform = `rotate(${data.yaw_deg}deg)`;
+                robotDirection.style.transform = `rotate(${data.yaw_deg + 90}deg)`;
                 
                 // 상태 업데이트
-                statusElement.textContent = `로봇 위치: x=${data.robot_x.toFixed(2)}m, y=${data.robot_y.toFixed(2)}m`;
+                statusElement.textContent = `로봇 위치: x=${data.robot_x.toFixed(2)}m, y=${data.robot_y.toFixed(2)}m, 픽셀: (${Math.round(scaledX)}, ${Math.round(scaledY)})`;
+            } else {
+                // 이전 방식 (서버에서 이미지 크기 정보가 없는 경우)
+                const scaledX = data.pixel_x * scaleRatio;
+                const scaledY = data.pixel_y * scaleRatio;
+                
+                console.log(`원본 픽셀 좌표: (${data.pixel_x}, ${data.pixel_y})`);
+                console.log(`스케일 비율: ${scaleRatio}`);
+                console.log(`조정된 픽셀 좌표: (${scaledX}, ${scaledY})`);
+                
+                // 픽셀 좌표로 로봇 마커 위치 설정
+                robotMarker.style.left = `${scaledX}px`;
+                robotMarker.style.top = `${scaledY}px`;
+                
+                // 로봇 방향 표시 (시계방향 +90도 보정)
+                const directionLength = 30; // 방향 표시 길이
+                robotDirection.style.left = `${scaledX}px`;
+                robotDirection.style.top = `${scaledY}px`;
+                robotDirection.style.width = `${directionLength}px`;
+                robotDirection.style.transform = `rotate(${data.yaw_deg - 90}deg)`;
+                
+                // 상태 업데이트
+                statusElement.textContent = `로봇 위치: x=${data.robot_x.toFixed(2)}m, y=${data.robot_y.toFixed(2)}m, 픽셀: (${Math.round(scaledX)}, ${Math.round(scaledY)})`;
             }
-        };
-
+        }
+        
+        // 초기 웹소켓 연결
+        connectWebSocket();
+        
         // 지도 이미지 로드 완료 시 컨테이너 크기 조정
         mapImage.onload = function() {
-            mapContainer.style.width = `${mapImage.width}px`;
+            // 원본 이미지 크기 저장
+            originalWidth = mapImage.naturalWidth;
+            originalHeight = mapImage.naturalHeight;
+            
+            // 현재 표시 크기와 원본 크기의 비율 계산
+            scaleRatio = mapImage.width / originalWidth;
+            
+            console.log(`이미지 크기 조정 비율: ${scaleRatio}`);
+            console.log(`원본 이미지 크기: ${originalWidth}x${originalHeight}`);
+            console.log(`표시 이미지 크기: ${mapImage.width}x${mapImage.height}`);
+            
+            // 컨테이너 높이 자동 조정
             mapContainer.style.height = `${mapImage.height}px`;
+            
+            // 이미지가 로드된 후 저장된 로봇 위치가 있으면 업데이트
+            if (lastRobotData) {
+                updateRobotPosition(lastRobotData);
+            }
         };
+        
+        // 창 크기 변경 시 비율 재계산 및 로봇 위치 업데이트
+        window.addEventListener('resize', function() {
+            if (originalWidth > 0) {
+                // 새 비율 계산
+                scaleRatio = mapImage.width / originalWidth;
+                console.log(`창 크기 변경 - 새 비율: ${scaleRatio}`);
+                
+                // 컨테이너 높이 조정
+                mapContainer.style.height = `${mapImage.height}px`;
+                
+                // 저장된 로봇 위치가 있으면 새 비율로 업데이트
+                if (lastRobotData) {
+                    updateRobotPosition(lastRobotData);
+                }
+            }
+        });
     </script>
 </body>
 </html>
