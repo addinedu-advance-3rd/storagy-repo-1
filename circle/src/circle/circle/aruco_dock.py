@@ -11,6 +11,10 @@ from collections import deque
 from scipy.spatial.transform import Rotation as R
 from ament_index_python.packages import get_package_share_directory
 import math
+from circle.rotate90 import Rotate90
+from nav_msgs.msg import Odometry
+import tf_transformations
+from std_msgs.msg import Bool
 # Simple 1D Kalman Filter for smoothing the angle measurement
 class KalmanFilter:
     def __init__(self, initial_value=0.0, process_noise=1e-3, measurement_noise=1e-1, error_estimate=1.0):
@@ -35,7 +39,8 @@ class ArUcoDockingController(Node):
         # ArUco marker settings
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         self.parameters = cv2.aruco.DetectorParameters_create()
-        self.marker_size = 0.05  # marker size in meters
+        self.marker_size_1 = 0.1  # marker size in meters
+        self.marker_size_2 = 0.2 # marker size in meters
         self.effective_Kp_y = 0.0
         
         # Load calibration data
@@ -63,7 +68,12 @@ class ArUcoDockingController(Node):
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
 
         # ArUco docking activation service
-        self.service = self.create_service(Trigger, 'dock_robot', self.service_callback)
+        self.dock_service = self.create_service(
+            Trigger,
+            '/dock_robot',  # 서비스 이름이 '/dock_robot'인지 확인
+            self.dock_callback
+        )
+        self.get_logger().info("도킹 서비스 등록: /dock_robot")
 
         # Docking active flag
         self.control_active = False
@@ -95,10 +105,16 @@ class ArUcoDockingController(Node):
         self.prev_mean_error = 0.0
         self.filtered_angle = 0.0
         self.prev_filtered_angle = 0.0
+        self.first_goal_reached = False
         # For filtering and trend estimation
         self.error_history = deque(maxlen=5)
         self.kalman_filter = KalmanFilter(initial_value=0.0, process_noise=1e-3, measurement_noise=1e-1, error_estimate=1.0)
-
+        self.rotation_done_sub = self.create_subscription(
+            Bool,
+            '/rotation_done',
+            self.rotation_done_callback,
+            10
+        )
         # Parameters for adaptive controller gain adjustment
         self.adaptive_alpha = 0.05  # scaling factor for the trend
         self.min_gain = 0.01       # minimum angular gain
@@ -109,19 +125,35 @@ class ArUcoDockingController(Node):
         self.tolerance_z = 0.01
         # self.tolerance_yaw = 10.0
 
+        # 서비스 클라이언트 추가
+        self.rotate_client = self.create_client(Trigger, '/rotate_90_degrees')
+        while not self.rotate_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('rotate_90_degrees 서비스를 기다리는 중...')
+
         print('✅ ArUco docking controller activated.')
 
-    def service_callback(self, request, response):
-        """Toggle docking activation via service call."""
-        self.control_active = not self.control_active
-        if self.control_active:
-            self.get_logger().info("🚀 ArUco docking activated.")
-            response.success = True
-            response.message = "ArUco docking activated."
-        else:
-            self.get_logger().info("🛑 ArUco docking deactivated.")
-            response.success = True
-            response.message = "ArUco docking deactivated."
+        # 회전 상태 추적 플래그
+        self.rotation_in_progress = False
+        self.first_goal_reached = False
+        self.odom_moving = False
+        self.odom_moving_distance = 0.0
+        self.odom_initial_pose = None
+
+        # 디버깅을 위한 로그 추가
+        self.get_logger().info("회전 완료 토픽 구독 시작: /rotation_done")
+
+    def dock_callback(self, request, response):
+        """도킹 서비스 콜백 함수"""
+        self.get_logger().info("🔄 도킹 서비스 호출 받음!")
+        
+        # 도킹 제어 활성화
+        self.control_active = True
+        self.get_logger().info("✅ 도킹 제어 활성화됨!")
+        
+        # 응답 설정
+        response.success = True
+        response.message = "도킹 제어가 활성화되었습니다."
+        
         return response
 
     def reset_state(self):
@@ -146,17 +178,84 @@ class ArUcoDockingController(Node):
     def image_callback(self, msg):
         """Convert ROS image message to an OpenCV image."""
         self.rgb_image = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
+    
+    def move_forward_using_wheel_odom(self):
+        """휠 오도메트리를 사용하여 전진 이동"""
+        # 휠 오도메트리 데이터 구독
+
+        self.wheel_odom_sub = self.create_subscription(
+            Odometry,
+            '/odom',
+            self.wheel_odom_callback,
+            10
+        )
+    
+    def wheel_odom_callback(self, msg):
+        """휠 오도메트리 콜백"""
+        self.get_logger().info("휠 오도메트리 데이터 수신")
+        # 휠 오도메트리 데이터 추출
+        x = msg.pose.pose.position.x
+        y = msg.pose.pose.position.y
+        z = msg.pose.pose.position.z
+        dx, dy = 0, 0
+        # 휠 오도메트리 데이터 출력
+        self.get_logger().info(f"휠 오도메트리 데이터: x={x:.2f}, y={y:.2f}, z={z:.2f}")
+        # move forward using wheel odom
+
+        if not self.odom_moving and self.odom_initial_pose is None:
+            self.odom_initial_pose = (x,y)
+            self.odom_moving_distance = 0.0
+            self.odom_moving = True
+
+        else : 
+            dx = x - self.odom_initial_pose[0]
+            dy = y - self.odom_initial_pose[1]
+            self.odom_moving_distance = math.sqrt(dx**2 + dy**2)
+            self.get_logger().info(f"휠 오도메트리 이동거리: {self.odom_moving_distance:.2f}")
+            twist = Twist()
+
+            if self.odom_moving_distance < 0.013:
+                print("not quite yet, Move Foward")
+                twist.linear.x = 0.08
+            else : 
+                print("STOP MOVING")
+                twist.linear.x = 0.0
+                self.odom_moving = False
+                self.odom_moving_distance = 0.0
+                self.odom_initial_pose = None
+                self.get_logger().info("휠 오도메트리 이동 완료")
+            print("--------------------------------")
+            print(f"ODOM MOVING DISTANCE : {self.odom_moving_distance:.2f}")
+            print(f"twist.linear.x: {twist.linear.x:.2f}, twist.angular.z: {twist.angular.z:.2f}")
+            print("--------------------------------")
+            self.cmd_vel_pub.publish(twist)
 
     def timer_callback(self):
+        """주기적으로 실행되는 타이머 콜백"""
+        if not self.control_active:
+            # 제어가 활성화되지 않았으면 아무것도 하지 않음
+            return
+        
+        self.get_logger().info("도킹 제어 활성화 상태: 마커 추적 중...")
+        
+        # 이미지가 없으면 처리하지 않음
+        if self.rgb_image is None or self.rgb_image.size == 0:
+            self.get_logger().warn("이미지가 없습니다!")
+            return
+        
         frame = self.rgb_image.copy()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = cv2.aruco.detectMarkers(gray, self.aruco_dict, parameters=self.parameters)
+        #init TWIST
+
 
         twist = Twist()
+        twist.linear.x = 0.0
+        twist.angular.z = 0.0
 
         print (f"ids: {ids}")
 
-        if ids is not None:
+        if ids is not None and self.control_active:
             print("########################################################")
             print("FOUND MARKER")
             print("FOUND MARKER")
@@ -172,7 +271,10 @@ class ArUcoDockingController(Node):
             
             # Select the closest marker
             for i in range(len(ids)):
-                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.1, self.cmtx, self.dist)
+                # 마커 ID에 따라 적절한 마커 크기 선택
+                marker_size = self.marker_size_2 if ids[i] == 4 else self.marker_size_1
+                
+                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners[i], marker_size, self.cmtx, self.dist)
                 frame = cv2.drawFrameAxes(frame, self.cmtx, self.dist, rvec, tvec, 0.05)
                 print (f"rvec: {rvec}")
                 print (f"tvec: {tvec}")
@@ -195,13 +297,21 @@ class ArUcoDockingController(Node):
 
                 print (f"yaw: {yaw:.2f}, distance: {distance:.2f}")
 
-                if ids[i] == 0 :
+                # 회전 중이면 마커 처리 건너뛰기
+                if self.rotation_in_progress:
+                    twist.linear.x = 0.0
+                    twist.angular.z = 0.0
+                    continue
+                
+                if ids[i] == 0 and self.first_goal_reached == False:
                     if distance < 0.85: 
                         print ("회전 준비")
-                        twist.linear.x = 0.08
+                        # 회전 명령 직접 실행
+                        self.perform_90_degree_rotation()
+                        self.first_goal_reached = True
+                        
                     else : 
-
-                    print (f"✅ Marker ID: {ids[i]}")
+                        print (f"✅ Marker ID: {ids[i]}")
                         print ("1차 방향 정렬 시작")
                         if 180 - abs(pitch) > 20 : 
                             if pitch > 0 : 
@@ -218,13 +328,37 @@ class ArUcoDockingController(Node):
                                 twist.angular.z = 0.0
                                 print ("1차 직선 이동 시작")
                                 twist.linear.x = 0.08
+                if ids[i] == 4 and self.first_goal_reached and not self.rotation_in_progress:
+                    if distance < 0.54:
+                        print('도착')
+                        twist.linear.x = 0.0
+                        twist.angular.z = 0.0
+                        # just once, move forward using wheel odom
+                        self.move_forward_using_wheel_odom()
+                    else :
+                        print('2차 방향정렬 시작')
+                        if 180 - abs(pitch) > 20 : 
+                            print('절대값 비교시 20이상 차이남')
+                            if pitch > 0 : 
+                                twist.angular.z = 0.23
+                            else : 
+                                twist.angular.z = -0.2
+                        else :
+                            if 180 - abs(pitch) > 4 :
+                                if pitch > 0 : 
+                                    twist.angular.z = 0.1
+                                else : 
+                                    twist.angular.z = -0.08
+                            else : 
+                                twist.angular.z = 0.0
+                                print('2차 직선 이동 시작')
+                                twist.linear.x = 0.08
                             
-
  
                 # self.process_docking(best_tvec, best_rvec, best_id, twist, angle_error)
-        else:
+        elif not self.rotation_in_progress and self.control_active:
             twist.linear.x = 0.0
-            twist.angular.z = 0.2
+            twist.angular.z = 0.18
             self.get_logger().info("Marker not found")
             # Reset error history when no marker is detected
             self.error_history = deque(maxlen=5)
@@ -239,9 +373,17 @@ class ArUcoDockingController(Node):
         self.prev_angle_error = twist.angular.z  # update with current angular error
 
         print(f"twist.linear.x: {twist.linear.x:.2f}, twist.angular.z: {twist.angular.z:.2f}")
-
+        
         # Publish the command
+        print("--------------------------------")
+        print("PUBLISHING TWIST")
+        print(f"twist.linear.x: {twist.linear.x:.2f}, twist.angular.z: {twist.angular.z:.2f}")
+        print("--------------------------------")
         self.cmd_vel_pub.publish(twist)
+        
+        # 디버깅을 위한 상태 출력
+        if ids is not None and len(ids) > 0:
+            self.get_logger().info(f"회전 상태: in_progress={self.rotation_in_progress}, first_goal={self.first_goal_reached}")
         
     def process_docking(self, tvec, rvec, marker_id, twist, angle_error):
         tvec = np.squeeze(tvec)
@@ -331,8 +473,33 @@ class ArUcoDockingController(Node):
         self.effective_Kp_y = effective_Kp_y
         self.prev_distance = diff_z
         
+
     def __del__(self):
         cv2.destroyAllWindows()
+
+    def perform_90_degree_rotation(self):
+        """서비스를 통해 90도 회전 요청"""
+        # 회전 시작 플래그 설정
+        self.rotation_in_progress = True
+        
+        request = Trigger.Request()
+        future = self.rotate_client.call_async(request)
+        self.get_logger().info("90도 회전 요청 전송")
+        
+        # 비동기 호출이므로 결과를 기다리지 않음
+        # 회전이 완료되면 rotation_done 토픽을 통해 알림 받음
+
+    def rotation_done_callback(self, msg):
+        """회전 완료 토픽 콜백"""
+        self.get_logger().info(f"회전 상태 메시지 수신: {msg.data}")
+        
+        if msg.data:  # True일 때 (회전 완료)
+            self.get_logger().info("회전 완료 메시지 수신 - 회전 완료!")
+            self.rotation_in_progress = False
+            self.first_goal_reached = True
+        else:  # False일 때 (회전 시작)
+            self.get_logger().info("회전 시작 메시지 수신 - 회전 시작!")
+            self.rotation_in_progress = True
 
 def main(args=None):
     rp.init(args=args)
