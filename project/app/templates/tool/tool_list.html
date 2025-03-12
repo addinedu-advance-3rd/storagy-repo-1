@@ -1,4 +1,9 @@
 {% extends 'base.html' %}
+{% block head %}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
 {% block content %}
 <div class="container my-3">
     <div id="connection-status" class="alert alert-info mb-3">소켓 연결 상태: 연결 중...</div>
@@ -38,13 +43,29 @@
         </div>
     </div>
     
-    <div class="mt-3">
+    <!-- <div class="mt-3">
         <h4>소켓 테스트</h4>
         <button id="test-socket" class="btn btn-primary">소켓 테스트 메시지 보내기</button>
         <button id="update-hammer" class="btn btn-warning">망치 상태 변경</button>
         <button id="update-driver" class="btn btn-warning">드라이버 상태 변경</button>
         <button id="update-spanner" class="btn btn-warning">스패너 상태 변경</button>
-    </div>
+        <button id="reconnect-socket" class="btn btn-danger">소켓 재연결</button>
+        <button id="force-refresh" class="btn btn-info">강제 새로고침</button>
+        <button id="force-update" class="btn btn-success">강제 상태 업데이트</button>
+    </div> -->
+    
+    <!-- <div class="mt-3">
+        <h4>디버깅 정보</h4>
+        <div class="border p-3" style="background-color: #f8f9fa;">
+            <h5>서버에서 가져온 도구 상태:</h5>
+            <ul>
+            {% for tool in tool_list %}
+                <li>{{ tool.name }}: {{ '사용 가능' if tool.avail else '사용 중' }} (ID: {{ tool.id }})</li>
+            {% endfor %}
+            </ul>
+            <p>현재 시간: {{ now }}</p>
+        </div>
+    </div> -->
 </div>
 {% endblock %}
 {% block script %}
@@ -53,12 +74,13 @@
         const connectionStatus = document.getElementById('connection-status');
         const eventLog = document.getElementById('event-log');
         
-        // 도구 이름과 ID 매핑 (예시, 실제 데이터에 맞게 수정 필요)
-        const toolNameToId = {
-            'Hammer': 1,
-            'Driver': 2,
-            'Spanner': 3
-        };
+        // 도구 이름과 ID 매핑을 동적으로 생성
+        const toolNameToId = {};
+        {% for tool in tool_list %}
+            toolNameToId['{{ tool.name }}'] = {{ tool.id }};
+        {% endfor %}
+
+        console.log('도구 이름-ID 매핑:', toolNameToId);
         
         // 로그 함수
         function logEvent(message, type = 'info') {
@@ -86,8 +108,18 @@
         // 소켓 연결 설정
         let socket;
         try {
-            socket = io('/');
-            logEvent('소켓 객체 생성됨');
+            socket = io('/', {
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                timeout: 5000,
+                transports: ['websocket', 'polling']  // websocket을 우선 시도
+            });
+            logEvent('소켓 객체 생성됨 (옵션: reconnection 활성화)', 'info');
+            
+            // 소켓 상태 디버깅
+            logEvent(`소켓 연결 상태: ${socket.connected ? '연결됨' : '연결 안됨'}`, 'info');
+            logEvent(`소켓 ID: ${socket.id || '아직 없음'}`, 'info');
         } catch (error) {
             logEvent(`소켓 객체 생성 실패: ${error.message}`, 'error');
             connectionStatus.className = 'alert alert-danger';
@@ -100,6 +132,10 @@
                 logEvent('서버에 연결되었습니다!', 'success');
                 connectionStatus.className = 'alert alert-success';
                 connectionStatus.textContent = '소켓 연결 상태: 연결됨';
+                
+                // 연결 후 현재 도구 상태 요청
+                socket.emit('request_tool_status');
+                logEvent('서버에 도구 상태 요청 전송', 'info');
             });
             
             // 연결 오류 이벤트
@@ -110,33 +146,20 @@
             });
             
             // 도구 상태 직접 업데이트 함수
-            function updateToolStatusDirect(toolName, isAvailable) {
+            function updateToolStatusDirect(toolName, isAvailable, user = null) {
                 // 도구 이름으로 ID 찾기
                 const toolId = toolNameToId[toolName];
                 if (!toolId) {
-                    logEvent(`알 수 없는 도구 이름: ${toolName}`, 'warning');
+                    logEvent(`알 수 없는 도구 이름: ${toolName} (매핑: ${JSON.stringify(toolNameToId)})`, 'warning');
                     return false;
                 }
                 
+                logEvent(`도구 상태 업데이트 시도: ${toolName} (ID: ${toolId}) -> ${isAvailable ? '사용 가능' : '사용 중'}`, 'info');
+                
+                // 상태 요소 찾기
                 const statusElement = document.getElementById(`status-${toolId}`);
-                if (statusElement) {
-                    const oldStatus = statusElement.textContent.trim();
-                    const newStatus = isAvailable ? '사용 가능' : '사용 중';
-                    
-                    logEvent(`도구 ${toolName} (ID: ${toolId}) 상태 변경 시도: ${oldStatus} → ${newStatus}`, 'info');
-                    
-                    if (isAvailable) {
-                        statusElement.className = 'badge bg-success';
-                        statusElement.textContent = '사용 가능';
-                    } else {
-                        statusElement.className = 'badge bg-danger';
-                        statusElement.textContent = '사용 중';
-                    }
-                    
-                    logEvent(`도구 ${toolName} 상태 변경 완료!`, 'success');
-                    return true;
-                } else {
-                    logEvent(`상태 요소를 찾을 수 없음: status-${toolId} (${toolName})`, 'warning');
+                if (!statusElement) {
+                    logEvent(`상태 요소를 찾을 수 없음: status-${toolId}`, 'error');
                     
                     // 모든 상태 요소 출력 (디버깅용)
                     const allStatusElements = document.querySelectorAll('[id^="status-"]');
@@ -145,8 +168,51 @@
                         logEvent(`- 발견된 상태 요소: ${el.id}`, 'info');
                     });
                     
+                    // 요소가 없으면 새로 만들기 시도
+                    const toolRow = document.getElementById(`tool-${toolId}`);
+                    if (toolRow) {
+                        const statusCell = toolRow.querySelector('td:last-child');
+                        if (statusCell) {
+                            const newStatusElement = document.createElement('span');
+                            newStatusElement.id = `status-${toolId}`;
+                            newStatusElement.className = isAvailable ? 'badge bg-success' : 'badge bg-danger';
+                            newStatusElement.textContent = isAvailable ? '사용 가능' : '사용 중';
+                            
+                            // 기존 내용 제거 후 새 요소 추가
+                            statusCell.innerHTML = '';
+                            statusCell.appendChild(newStatusElement);
+                            
+                            logEvent(`상태 요소 새로 생성: status-${toolId}`, 'success');
+                            return true;
+                        }
+                    }
+                    
                     return false;
                 }
+                
+                // 상태 변경
+                const oldStatus = statusElement.textContent.trim();
+                const newStatus = isAvailable ? '사용 가능' : '사용 중';
+                
+                logEvent(`도구 ${toolName} (ID: ${toolId}) 상태 변경: ${oldStatus} → ${newStatus}${user ? ' (사용자: ' + user + ')' : ''}`, 'info');
+                
+                // 클래스와 텍스트 변경
+                if (isAvailable) {
+                    statusElement.className = 'badge bg-success';
+                    statusElement.textContent = '사용 가능';
+                } else {
+                    statusElement.className = 'badge bg-danger';
+                    statusElement.textContent = '사용 중';
+                }
+                
+                // 변경 후 확인
+                setTimeout(() => {
+                    const currentStatus = document.getElementById(`status-${toolId}`).textContent.trim();
+                    logEvent(`도구 ${toolName} 상태 변경 확인: ${currentStatus} (예상: ${newStatus})`, 
+                             currentStatus === newStatus ? 'success' : 'error');
+                }, 100);
+                
+                return true;
             }
             
             // 도구 상태 업데이트 이벤트 리스너
@@ -154,15 +220,30 @@
                 logEvent(`도구 업데이트 이벤트 수신: ${JSON.stringify(data)}`, 'success');
                 console.log('도구 업데이트 이벤트 데이터:', data);
                 
-                // 도구 이름과 상태 추출
-                const toolName = data.tool_name;
-                const isAvailable = data.avail;
-                
-                if (toolName && isAvailable !== undefined) {
-                    // 직접 DOM 업데이트
-                    updateToolStatusDirect(toolName, isAvailable);
-                } else {
-                    logEvent('이벤트 데이터에 필요한 정보가 없습니다', 'warning');
+                try {
+                    // 도구 이름과 상태 추출
+                    const toolName = data.tool_name;
+                    const isAvailable = data.avail;
+                    const user = data.current_user || data.user;
+                    
+                    if (toolName && isAvailable !== undefined) {
+                        // 직접 DOM 업데이트
+                        const result = updateToolStatusDirect(toolName, isAvailable, user);
+                        logEvent(`도구 상태 업데이트 결과: ${result ? '성공' : '실패'}`, result ? 'success' : 'error');
+                        
+                        // 강제 업데이트 플래그가 있으면 페이지 새로고침
+                        if (data.force_update) {
+                            logEvent('강제 업데이트 플래그 감지, 5초 후 페이지 새로고침...', 'warning');
+                            setTimeout(() => {
+                                window.location.reload(true);
+                            }, 5000);
+                        }
+                    } else {
+                        logEvent('이벤트 데이터에 필요한 정보가 없습니다', 'warning');
+                    }
+                } catch (error) {
+                    logEvent(`도구 상태 업데이트 중 오류: ${error.message}`, 'error');
+                    console.error('도구 상태 업데이트 오류:', error);
                 }
             });
             
@@ -179,6 +260,14 @@
                     // 대여/반납에 따라 상태 업데이트
                     const isAvailable = (action === 'return');
                     updateToolStatusDirect(toolName, isAvailable);
+                }
+            });
+            
+            // 콘솔 로그 이벤트 리스너 추가
+            socket.on("console-log", function(data) {
+                if (data && data.message) {
+                    const level = data.level || 'info';
+                    logEvent(data.message, level);
                 }
             });
             
@@ -221,6 +310,58 @@
             socket.on('test_response', function(data) {
                 logEvent(`테스트 응답 수신: ${JSON.stringify(data)}`, 'success');
                 alert('서버로부터 응답 받음: ' + JSON.stringify(data));
+            });
+            
+            // 도구 상태 초기화 이벤트 리스너 추가
+            socket.on("tool-status-init", function(data) {
+                logEvent(`도구 상태 초기화 데이터 수신: ${JSON.stringify(data)}`, 'success');
+                
+                if (data && Array.isArray(data.tools)) {
+                    data.tools.forEach(tool => {
+                        updateToolStatusDirect(tool.name, tool.avail, tool.current_user);
+                    });
+                    logEvent('모든 도구 상태 초기화 완료', 'success');
+                }
+            });
+
+            // 소켓 재연결 버튼
+            document.getElementById('reconnect-socket').addEventListener('click', function() {
+                logEvent('소켓 재연결 시도...', 'warning');
+                if (socket) {
+                    socket.disconnect();
+                    setTimeout(() => {
+                        socket.connect();
+                        logEvent('소켓 재연결 완료', 'success');
+                    }, 500);
+                }
+            });
+
+            // 강제 새로고침 버튼
+            document.getElementById('force-refresh').addEventListener('click', function() {
+                logEvent('페이지 강제 새로고침...', 'warning');
+                window.location.reload(true);
+            });
+
+            // 강제 상태 업데이트 버튼
+            document.getElementById('force-update').addEventListener('click', function() {
+                logEvent('강제 상태 업데이트 요청...', 'warning');
+                
+                // API 요청
+                fetch('/api/tool/force-update')
+                    .then(response => response.json())
+                    .then(data => {
+                        logEvent(`강제 상태 업데이트 결과: ${JSON.stringify(data)}`, 'success');
+                        
+                        // 성공 시 페이지 새로고침
+                        if (data.success) {
+                            setTimeout(() => {
+                                window.location.reload(true);
+                            }, 1000);
+                        }
+                    })
+                    .catch(error => {
+                        logEvent(`강제 상태 업데이트 오류: ${error.message}`, 'error');
+                    });
             });
         }
     });

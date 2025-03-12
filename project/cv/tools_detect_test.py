@@ -5,6 +5,9 @@ import time
 from datetime import datetime
 from ultralytics import YOLO
 import numpy as np
+import requests
+import json
+import os
 
 from flask import current_app
 from flask_socketio import emit
@@ -16,8 +19,9 @@ class ObjectDetect:
     def __init__(self, latest_worker
                 #  , cam_index=3
                  , cam_index=0 #test
-                 , model_path="/home/addinedu/venv/facedetection/tools_train/runs/segment/tools_training/weights/best.pt"
-    , lost_frame_count=60, detected_frame_count=60):
+                 , model_path="/home/addinedu/dev_ws/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
+    , lost_frame_count=60, detected_frame_count=60
+    , tools_status=None, event_queue=None):
         """
         객체 감지를 수행하는 클래스
         - latest_worker: 최근 감지된 사용자를 공유하는 변수
@@ -59,24 +63,52 @@ class ObjectDetect:
         self.Tool = Tool
         self.Log = Log
         # 구조개선필요
+        self.tools_status = tools_status
+        self.event_queue = event_queue
 
     # Tool
     def update_Tool(self, tool_name, avail):
-        """ Tool의 avail 상태 업데이트 """
-        tool = self.Tool.query.filter_by(name=tool_name).first()
-        # id가 더 바람직
-        if tool:
-            tool.avail = avail
-            self.db.session.commit()
-            # 명확한 데이터 구조로 이벤트 발생
-            self.socketio.emit("tool-update", {
-                'tool_id': tool.id,
-                'tool_name': tool_name,
-                'avail': avail,
-                'timestamp': str(datetime.now())
-            }, namespace='/')
-            print(f'소켓 emit: tool-update - {tool_name} 상태 변경: {avail}')
-        
+        """도구 상태를 데이터베이스에 업데이트하는 함수"""
+        try:
+            from app.models import Tool
+            from app import db
+            import traceback
+            
+            print(f"[DB] 도구 '{tool_name}' 상태 업데이트 시도: {avail}")
+            
+            # 도구 이름으로 도구 객체 찾기
+            tool = Tool.query.filter_by(name=tool_name).first()
+            
+            if tool:
+                # 현재 상태 확인
+                current_status = tool.avail
+                print(f"[DB] 도구 '{tool_name}' 현재 상태: {current_status}, 변경할 상태: {avail}")
+                
+                # 상태가 다를 때만 업데이트
+                if current_status != avail:
+                    # 상태 변경 및 저장
+                    tool.avail = avail
+                    db.session.commit()
+                    print(f"[DB] 도구 '{tool_name}' 상태 업데이트 성공: {avail}")
+                    
+                    # 직접 SQL 쿼리로 확인
+                    from sqlalchemy import text
+                    result = db.session.execute(text(f"SELECT avail FROM tool WHERE name = '{tool_name}'")).fetchone()
+                    print(f"[DB] SQL 확인 결과: {result}")
+                    
+                    return True
+                else:
+                    print(f"[DB] 도구 '{tool_name}' 상태가 이미 {avail}입니다. 업데이트 불필요.")
+                    return False
+            else:
+                print(f"[DB] 도구 '{tool_name}'을 찾을 수 없음")
+                return False
+        except Exception as e:
+            print(f"[DB] 도구 상태 업데이트 중 오류: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return False
+
     # Log
     def create_log(self, tool_name, user_name, rental_date):
         """ 대여 """
@@ -132,36 +164,119 @@ class ObjectDetect:
 
                 # 대여 발생
                 if self.confirmed_state[obj] == "Missing":
-                    with self.app.app_context():
-                        self.update_Tool(obj, False)
-                        self.create_log(obj, self.last_user, self.rental_times[obj])
-                        # 로그 업데이트 이벤트 추가 (명확한 데이터 구조)
-                        self.socketio.emit('log-update', {
-                            'tool_name': obj,
-                            'action': 'rental',
-                            'user': self.last_user,
-                            'timestamp': str(self.rental_times[obj])
-                        }, namespace='/')
-                        print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")
+                    try:
+                        if self.app and hasattr(self.app, 'app_context'):
+                            with self.app.app_context():
+                                self.update_Tool(obj, False)
+                                self.create_log(obj, self.last_user, self.rental_times[obj])
+                                # 로그 업데이트 이벤트 추가 (명확한 데이터 구조)
+                                if self.socketio:
+                                    self.socketio.emit('log-update', {
+                                        'tool_name': obj,
+                                        'action': 'rental',
+                                        'user': self.last_user,
+                                        'timestamp': str(self.rental_times[obj])
+                                    }, namespace='/')
+                                
+                                # 이벤트 큐를 통한 업데이트
+                                if hasattr(self, 'event_queue') and self.event_queue:
+                                    self.event_queue.put({
+                                        'type': 'tool-update',
+                                        'payload': {
+                                            'tool_name': obj,
+                                            'avail': False,
+                                            'user': self.last_user,
+                                            'timestamp': str(self.rental_times[obj]),
+                                            'force_update': True
+                                        }
+                                    })
+                                
+                                # 공유 딕셔너리 직접 업데이트
+                                if hasattr(self, 'tools_status') and self.tools_status is not None:
+                                    self.tools_status[obj] = False
+                                    print(f"[DEBUG] 공유 딕셔너리 직접 업데이트: {obj} -> False")
+
+                                # HTTP 요청으로 상태 업데이트 (소켓 백업)
+                                try:
+                                    # Flask 서버 URL (환경에 맞게 수정 필요)
+                                    url = "http://localhost:5000/api/tool/update"
+                                    
+                                    # 데이터 준비
+                                    data = {
+                                        "tool_name": obj,
+                                        "avail": False,
+                                        "user": self.last_user,
+                                        "timestamp": str(self.rental_times[obj]),
+                                        "api_key": "your_secret_key"  # 보안을 위한 키
+                                    }
+                                    
+                                    # POST 요청 전송
+                                    response = requests.post(url, json=data, timeout=3)
+                                    print(f"[HTTP] 도구 상태 업데이트 요청 결과: {response.status_code} - {response.text}")
+                                except Exception as e:
+                                    print(f"[HTTP] 도구 상태 업데이트 요청 실패: {e}")
+                    except Exception as e:
+                        print(f"🚨 대여 처리 중 오류: {e}")
+                    
+                    print(f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}")
+                    # 이벤트 큐를 통해 이벤트 전달 (딕셔너리 형태로)
+                    if hasattr(self, 'event_queue') and self.event_queue:
+                        self.event_queue.put({
+                            'type': 'console-log',
+                            'payload': {
+                                'message': f"🚨 {obj} 사라짐 → 가져간 사용자: {self.last_user} (이전: {prev_user}) | 대여 시간: {self.rental_times[obj]}",
+                                'level': 'warning'
+                            }
+                        })
+                    
+                    # 강제 업데이트 추가
+                    if hasattr(self, 'tools_status') and self.tools_status is not None:
+                        self.tools_status[obj] = False
 
                 # 반납 발생
                 else:
-                    with self.app.app_context():
-                        self.return_times[obj] = datetime.now()
-                        self.update_Tool(obj, True)
-                        self.fix_log(obj, self.return_times[obj])
-                        # 로그 업데이트 이벤트 추가 (명확한 데이터 구조)
-                        self.socketio.emit('log-update', {
-                            'tool_name': obj,
-                            'action': 'return',
-                            'user': self.last_user,
-                            'timestamp': str(self.return_times[obj])
-                        }, namespace='/')
-                        print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}")
+                    try:
+                        if self.app and hasattr(self.app, 'app_context'):
+                            with self.app.app_context():
+                                self.return_times[obj] = datetime.now()
+                                self.update_Tool(obj, True)
+                                self.fix_log(obj, self.return_times[obj])
+                                # 로그 업데이트 이벤트 추가 (명확한 데이터 구조)
+                                if self.socketio:
+                                    self.socketio.emit('log-update', {
+                                        'tool_name': obj,
+                                        'action': 'return',
+                                        'user': self.last_user,
+                                        'timestamp': str(self.return_times[obj])
+                                    }, namespace='/')
+                    except Exception as e:
+                        print(f"✅ 반납 처리 중 오류: {e}")
+                    
+                    print(f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}")
+                    # 이벤트 큐를 통해 이벤트 전달 (딕셔너리 형태로)
+                    if hasattr(self, 'event_queue') and self.event_queue:
+                        self.event_queue.put({
+                            'type': 'console-log',
+                            'payload': {
+                                'message': f"✅ {obj} 감지됨 → {self.last_user} 반납 처리 (이전: {prev_user}) | 반납 시간: {self.return_times[obj]}",
+                                'level': 'success'
+                            }
+                        })
+                    
+                    # 강제 업데이트 추가
+                    if hasattr(self, 'tools_status') and self.tools_status is not None:
+                        self.tools_status[obj] = True
 
+            # 상태 파일 업데이트
+            self.update_status_file()
+            
             self.previous_state[obj] = self.confirmed_state[obj]  # 이전 상태 업데이트
 
     def detect_objects(self):
+        """객체 감지 메인 함수"""
+        # 초기화 플래그
+        initialized = False
+        
         if not self.cap.isOpened():
             print("Error: 객체 감지 카메라를 열 수 없습니다.")
             return
@@ -207,9 +322,89 @@ class ObjectDetect:
             # 감지 상태 업데이트 및 중복 이벤트 방지 처리
             self.update_detection_status(detected_now)
 
+            # 첫 번째 프레임에서 도구 상태 초기화
+            if not initialized:
+                self.initialize_tool_status()
+                initialized = True
+
             cv2.imshow("YOLO Instance Segmentation - Improved Polygon", frame)
             if cv2.waitKey(30) & 0xFF == ord('q'):
                 break
 
         self.cap.release()
         cv2.destroyAllWindows()
+
+    def initialize_tool_status(self):
+        """도구 상태를 초기화하는 함수"""
+        from datetime import datetime
+        
+        try:
+            # 현재 감지 상태에 따라 도구 상태 초기화
+            for obj in self.detected_objects:
+                is_detected = self.confirmed_state[obj] == "Detected"
+                
+                # 공유 메모리 업데이트
+                if hasattr(self, 'tools_status') and self.tools_status is not None:
+                    self.tools_status[obj] = is_detected
+                    print(f"[INIT] 공유 메모리 도구 상태 초기화: {obj} -> {is_detected}")
+                
+                # 데이터베이스 업데이트
+                try:
+                    if self.app and hasattr(self.app, 'app_context'):
+                        with self.app.app_context():
+                            self.update_Tool(obj, is_detected)
+                    else:
+                        # HTTP 요청으로 상태 업데이트
+                        try:
+                            import requests
+                            
+                            # Flask 서버 URL
+                            url = "http://localhost:5000/api/tool/update"
+                            
+                            # 데이터 준비
+                            data = {
+                                "tool_name": obj,
+                                "avail": is_detected,
+                                "user": "System",
+                                "timestamp": str(datetime.now()),
+                                "api_key": "your_secret_key"
+                            }
+                            
+                            # POST 요청 전송
+                            response = requests.post(url, json=data, timeout=3)
+                            print(f"[INIT] HTTP 도구 상태 초기화 요청 결과: {response.status_code} - {response.text}")
+                        except Exception as e:
+                            print(f"[INIT] HTTP 도구 상태 초기화 요청 실패: {e}")
+                except Exception as e:
+                    print(f"[INIT] 도구 상태 초기화 중 오류: {e}")
+            
+            # 상태 파일 업데이트
+            self.update_status_file()
+            
+            print("[INIT] 모든 도구 상태 초기화 완료")
+            return True
+        except Exception as e:
+            print(f"[INIT] 도구 상태 초기화 중 오류: {e}")
+            return False
+
+    def update_status_file(self):
+        """도구 상태를 파일로 저장하는 함수"""
+        try:
+            import json
+            import os
+            
+            # 상태 정보 구성
+            status_data = {}
+            for obj in self.detected_objects:
+                status_data[obj] = self.confirmed_state[obj] == "Detected"
+            
+            # 상태 파일 경로
+            status_file = os.path.join(os.path.dirname(__file__), 'tool_status.json')
+            
+            # 파일에 저장
+            with open(status_file, 'w') as f:
+                json.dump(status_data, f)
+            
+            print(f"[FILE] 도구 상태 파일 업데이트 완료: {status_data}")
+        except Exception as e:
+            print(f"[FILE] 도구 상태 파일 업데이트 실패: {e}")

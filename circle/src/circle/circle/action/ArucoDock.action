@@ -1,0 +1,10 @@
+# Goal (입력)
+bool start  # 시작 여부
+
+---
+# Result (결과)
+bool success  # 성공 여부
+
+---
+# Feedback (실행 중 피드백)
+float32 progress  # 진행률 (%)

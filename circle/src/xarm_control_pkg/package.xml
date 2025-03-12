@@ -1,25 +1,22 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>circle</name>
+  <name>xarm_control_pkg</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="storagy@todo.todo">storagy</maintainer>
+  <maintainer email="bskim8823@gmail.com">addinedu</maintainer>
   <license>TODO: License declaration</license>
 
+  <!-- ROS2 기본 의존성 -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!--ROS2 Action-->
   <depend>rclpy</depend>
-  <depend>std_msgs</depend>
-  <depend>nav2_msgs</depend>
 
-    <!--ROS2 Action-->
-  <depend>rclpy_action</depend>
   <depend>action_msgs</depend>
-  <depend>package_msg</depend>  
+  <depend>package_msg</depend>  <!-- ✅ 액션 메시지 패키지 추가 -->
   
-
-  <depend>rosidl_default_generators</depend>
-  <!-- <depend>action_msgs</depend> -->
-
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
