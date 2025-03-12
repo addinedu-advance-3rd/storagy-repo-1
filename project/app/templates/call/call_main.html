@@ -20,9 +20,8 @@
         <img src="{{ url_for('static', filename='uploads/map.png') }}" alt="지도 이미지" class="img-fluid">
     </div>
     <div class="text-center mt-4">
-        <button class="btn btn-secondary" btn-lg onclick="showAlert('A')">A구역 호출</button>
-        <button class="btn btn-secondary" btn-lg onclick="showAlert('B')">B구역 호출</button>
-        <button class="btn btn-secondary" btn-lg onclick="showAlert('C')">C구역 호출</button>
+        <button id=areaA class="btn btn-secondary" btn-lg onclick="showAlert('A')">A구역 호출</button>
+        <button id=areaB class="btn btn-secondary" btn-lg onclick="showAlert('B')">B구역 호출</button>
     </div>
 </div>
 <script>
@@ -30,5 +29,71 @@
         document.getElementById('modalBody').innerText = message + '구역으로 가고 있다. 조금만 기다려라.';
         $('#alertModal').modal('show');
     }
+</script>
+{% endblock %}
+{% block script %}
+<script>
+  const ros = new ROSLIB.Ros({
+    url: 'ws://192.168.0.6:9090', // rosbridge_websocket 주소
+  });
+
+  // 버튼 클릭 이벤트 핸들러
+  document.getElementById('areaA').addEventListener('click', function () {
+    console.log('버튼 눌림')
+    
+    var navigateToPoseClient = new ROSLIB.ActionClient({
+      ros: ros,
+      serverName: '/navigate_to_pose', // nav2 액션 서버 이름
+      actionName: 'nav2_msgs/action/NavigateToPose' // 액션 메시지 유형
+    });
+
+    // 목표 위치 설정
+    const goal = new ROSLIB.Goal({
+      actionClient: navigateToPoseClient,
+      goalMessage: {
+        pose: {
+          header: {
+            frame_id: 'map', // 맵 프레임 ID
+          },
+          pose: {
+            position: {
+              x: -1.8762658935795684, // 목표 x 좌표
+              y: -0.2064057218805232, // 목표 y 좌표
+              z: 0.0, // 목표 z 좌표
+            },
+            orientation: {
+              x: 0.0,
+              y: 0.0,
+              z: -0.9612266342892032,
+              w: 0.27575960098072805,
+            },
+          },
+        },
+      },
+    });
+
+    ros.on('connection', function () {
+    console.log('Connected to ROS');
+    });
+
+    ros.on('error', function (error) {
+      console.log('Error connecting to ROS:', error);
+    });
+
+    ros.on('close', function () {
+      console.log('Connection to ROS closed');
+    });
+
+    goal.on('feedback', function (feedback) {
+      console.log('Feedback:', feedback);
+    });
+
+    goal.on('result', function (result) {
+      console.log('Result:', result);
+    });
+
+    goal.send();
+    console.log('목표전송')
+  });
 </script>
 {% endblock %}
