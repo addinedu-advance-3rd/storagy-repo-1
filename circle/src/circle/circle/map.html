@@ -38,6 +38,17 @@
             transform: translate(-50%, -50%);
             z-index: 10;
         }
+        #fod-marker {
+        position: absolute;
+        width: 10px; /* 마커 크기 */
+        height: 10px; /* 마커 크기 */
+        background-color: green; /* 초록색 마커 */
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        display: none; /* 초기에는 숨김 */
+        }
+
         #robot-direction {
             position: absolute;
             width: 30px; /* 방향 표시 길이 증가 */
@@ -63,6 +74,7 @@
         <!-- <img id="map-image" src="/map-image?no_cv=true" alt="지도 이미지"> -->
         <div id="robot-marker" style="display:none;"></div>
         <div id="robot-direction" style="display:none;"></div>
+        <div id="fod-marker" style="display:none;"></div>
     </div>
 
     <script>
@@ -170,6 +182,9 @@
                         
                         // 로봇 위치 업데이트
                         updateRobotPosition(data);
+
+                        //FOD 위치 업데이트
+                        updateFODPosition(data);
                     }
                 } catch (e) {
                     console.error("메시지 처리 오류:", e);
@@ -236,6 +251,33 @@
                 statusElement.textContent = `로봇 위치: x=${data.robot_x.toFixed(2)}m, y=${data.robot_y.toFixed(2)}m, 픽셀: (${Math.round(scaledX)}, ${Math.round(scaledY)})`;
             }
         }
+        // FOD 위치 업데이트 함수
+        function updateFODPosition(data) {
+            const fodMarker = document.getElementById('fod-marker');
+
+            if (data.fod_x !== undefined && data.fod_y !== undefined) {
+                // 지도 크기 비율 계산
+                const widthRatio = mapImage.width / data.img_width;
+                const heightRatio = mapImage.height / data.img_height;
+
+                // FOD 픽셀 좌표 변환
+                const adjustedFodX = data.fod_x * widthRatio;
+                const adjustedFodY = mapImage.height - (data.fod_y * heightRatio);  // ✅ y축 반전 적용
+
+                console.log(`📌 FOD 원본 픽셀 좌표: (${data.fod_x}, ${data.fod_y})`);
+                console.log(`📌 조정된 FOD 좌표: (${adjustedFodX}, ${adjustedFodY})`);
+
+                // FOD 마커 위치 설정
+                fodMarker.style.left = `${adjustedFodX}px`;
+                fodMarker.style.top = `${adjustedFodY}px`;
+                fodMarker.style.display = 'block'; // 표시
+            } else {
+                console.log("⚠️ FOD 데이터 없음");
+                fodMarker.style.display = 'none'; // 숨김
+            }
+        }
+
+
         
         // 초기 웹소켓 연결
         connectWebSocket();

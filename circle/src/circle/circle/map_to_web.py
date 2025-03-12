@@ -8,11 +8,20 @@ import asyncio
 import threading
 import websockets
 import base64
+import time
+import multiprocessing
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from rclpy.node import Node
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from fodDetection import start_fod_detector
 import numpy as np
 import socket
+
+# ✅ 멀티프로세싱 공유 메모리 생성
+manager = multiprocessing.Manager()
+shared_data = manager.dict()
+shared_data["distance"] = 0.0
+shared_data["angle"] = 0.0
 
 # 웹소켓 클라이언트 연결을 저장할 세트
 connected_clients = set()
@@ -76,17 +85,28 @@ class MapHTTPHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(f"Server error: {str(e)}".encode('utf-8'))
 
+
+#지도 
 class MapVisualizer(Node):
     def __init__(self):
         super().__init__('map_visualizer')
         
+
         # 지도 파일 경로 설정
-        self.map_yaml_path = os.path.join(os.path.dirname(__file__), 'room_11.yaml')
+        self.map_yaml_path = os.path.join(os.path.dirname(__file__), 'room_x.yaml')
         self.get_logger().info(f"지도 YAML 파일 경로: {self.map_yaml_path}")
         
         # 지도 로드
         self.load_map()
         
+        # 🔹 FOD 감지 마커 추가
+        self.fod_marker = FODMarker(shared_data, self.resolution, self.origin)
+
+        if self.fod_marker is None:
+            print("❌ FODMarker가 초기화되지 않았습니다.")
+        else:
+            print("✅ FODMarker 초기화 완료!")
+
         # 로봇 위치 구독
         self.pose_subscription = self.create_subscription(
             PoseWithCovarianceStamped,
@@ -220,7 +240,7 @@ class MapVisualizer(Node):
                         try:
                             # 클라이언트로부터 메시지 수신 (타임아웃 설정)
                             message = await asyncio.wait_for(websocket.recv(), timeout=1.0)
-                            print(f"클라이언트로부터 메시지 수신: {message}")
+                            print(f"v10클라이언트로부터 메시지 수신: {message}")
                         except asyncio.TimeoutError:
                             # 타임아웃은 정상적인 상황이므로 계속 진행
                             pass
@@ -344,68 +364,119 @@ class MapVisualizer(Node):
 
     def timer_callback(self):
         # 지도 이미지가 없으면 타이머 콜백 무시
-        if not hasattr(self, 'map_image_color'):
+        if not hasattr(self, 'map_image_color') or self.map_image_color is None:
+            print("⚠️ 지도 이미지가 아직 초기화되지 않았습니다. 타이머 콜백 건너뜀.")
             return
-        
-        # 매번 원본 지도 이미지를 복사하여 업데이트
-        display_img = self.map_image_color.copy()  # 컬러 이미지 사용
-        
-        if self.latest_pose is not None:
-            # 로봇의 월드 좌표 (map 프레임, m 단위)
+
+        # 🔍 FODMarker가 생성되었는지 체크
+        if not hasattr(self, 'fod_marker') or self.fod_marker is None:
+            print("❌ FODMarker가 아직 생성되지 않음.")
+            return
+
+        # ✅ 지도 이미지 복사 (업데이트 전)
+        display_img = self.map_image_color.copy()
+
+        # 로봇 위치 업데이트 (self.latest_pose가 없으면 FOD 업데이트도 건너뜀)
+        if self.latest_pose is None:
+            print("⚠️ 아직 로봇 위치 데이터가 없습니다. 타이머 콜백 건너뜀.")
+            return
+
+        try:
+            # ✅ 1️⃣ 로봇 위치 업데이트
             robot_x = self.latest_pose.position.x
             robot_y = self.latest_pose.position.y
 
             # 지도 메타데이터(원점, 해상도)를 이용해 픽셀 좌표로 변환
             pixel_x = int((robot_x - self.origin[0]) / self.resolution)
-            # OpenCV에서는 y 좌표가 위에서 아래로 증가하므로 이미지 높이에서 뺌
             pixel_y = display_img.shape[0] - int((robot_y - self.origin[1]) / self.resolution)
-            
-            # 로봇 위치 표시 (빨간 원)
-            cv2.circle(display_img, (pixel_x, pixel_y), 5, (0, 0, 255), -1)
+
+            # 로봇 위치 표시 (빨간 원 -> 로봇이미지로)
+            # ✅ 1️⃣ 로봇 이미지(`robot.png`) 불러오기 및 크기 조정 (14x14px)
+            robot_img = cv2.imread("/home/addinedu/venv/develop/circle/src/circle/circle/robot.png", cv2.IMREAD_UNCHANGED)  # PNG 이미지 불러오기
+
+            if robot_img is None:
+                print("❌ 로봇 이미지(robot.png) 로드 실패")
+                return
+
+            # ✅ PNG 이미지가 4채널(RGBA)이면 BGR로 변환
+            if robot_img.shape[2] == 4:  # RGBA인지 확인
+                robot_img = cv2.cvtColor(robot_img, cv2.COLOR_BGRA2BGR)  # 4채널 → 3채널 변환
+
+            # ✅ 크기 조정
+            robot_size = 16  # 기존 크기 (14x14)
+            robot_img = cv2.resize(robot_img, (robot_size, robot_size))  # 크기 변경
+
+            # ✅ 2️⃣ 지도 위에 로봇 이미지 붙이기 (이미지 모양 유지, 크기만 변경)
+            y1, y2 = pixel_y - robot_size // 2, pixel_y + robot_size // 2
+            x1, x2 = pixel_x - robot_size // 2, pixel_x + robot_size // 2
+
+            # ✅ 지도 범위 체크 후 적용
+            if 0 <= x1 and x2 < display_img.shape[1] and 0 <= y1 and y2 < display_img.shape[0]:
+                display_img[y1:y2, x1:x2] = robot_img  # PNG에서 알파 채널 제거 후 정상적으로 덮어씌우기
+            else:
+                print("❌ 로봇 이미지가 지도 범위를 벗어남")
+
             cv2.putText(display_img, "Robot", (pixel_x + 10, pixel_y),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-            
-            # 로봇의 orientation (Quaternion → yaw 변환)
-            qx = self.latest_pose.orientation.x
-            qy = self.latest_pose.orientation.y
-            qz = self.latest_pose.orientation.z
-            qw = self.latest_pose.orientation.w
-            yaw_rad = math.atan2(2.0*(qw*qz + qx*qy), 1.0 - 2.0*(qy*qy + qz*qz))
-            yaw_deg = math.degrees(yaw_rad)
-            
-            # 화살표 끝 점 계산 (로봇의 진행 방향 표시)
-            arrow_length = 20  # 픽셀 단위
-            arrow_x = int(pixel_x + arrow_length * math.cos(yaw_rad))
-            arrow_y = int(pixel_y - arrow_length * math.sin(yaw_rad))
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+
+            # ✅ 로봇의 yaw (방향) 계산
+            yaw_deg = self.get_robot_yaw()
+
+            # ✅ 로봇 진행 방향 표시 (화살표)
+            arrow_length = 10
+            arrow_x = int(pixel_x + arrow_length * math.cos(math.radians(yaw_deg)))
+            arrow_y = int(pixel_y - arrow_length * math.sin(math.radians(yaw_deg)))
             cv2.arrowedLine(display_img, (pixel_x, pixel_y), (arrow_x, arrow_y), (255, 0, 0), 2)
-            
-            # 웹소켓으로 로봇 위치 데이터 전송
-            # 웹 페이지에서 사용할 픽셀 좌표 계산
-            # 원본 이미지 기준 좌표 (y축은 위에서 아래로 증가)
-            web_pixel_x = pixel_x
-            web_pixel_y = display_img.shape[0] - int((robot_y - self.origin[1]) / self.resolution)
-            
-            # 이미지 크기 정보 추가
-            img_width = display_img.shape[1]
-            img_height = display_img.shape[0]
-            
-            # 디버깅 정보 출력
-            print(f"로봇 위치 (미터): ({robot_x:.2f}, {robot_y:.2f})")
-            print(f"원점 (미터): ({self.origin[0]:.2f}, {self.origin[1]:.2f})")
-            print(f"해상도 (미터/픽셀): {self.resolution:.6f}")
-            print(f"이미지 크기 (픽셀): {img_width}x{img_height}")
-            print(f"픽셀 좌표 (OpenCV): ({pixel_x}, {pixel_y})")
-            print(f"픽셀 좌표 (웹): ({web_pixel_x}, {web_pixel_y})")
-            
-            # 이미지 크기 정보도 함께 전송
-            self.send_robot_pose(robot_x, robot_y, web_pixel_x, web_pixel_y, yaw_deg, img_width, img_height)
-        
-        # 업데이트된 이미지 창 표시
-        cv2.imshow("Map with Robot Position", display_img)
-        cv2.waitKey(1)
-        
-        # HTTP 핸들러에 업데이트된 이미지 설정
-        MapHTTPHandler.map_image = display_img
+
+            # ✅ 디버깅 정보 출력
+            print(f"🟢 로봇 위치: x={robot_x:.2f}, y={robot_y:.2f}, yaw={yaw_deg:.2f}")
+            print(f"🟢 픽셀 좌표 (OpenCV): ({pixel_x}, {pixel_y})")
+
+        except Exception as e:
+            print(f"❌ 로봇 위치 업데이트 중 오류 발생: {e}")
+            return  # 로봇 위치 업데이트 실패 시 FOD 업데이트도 하지 않음
+
+        # ✅ 2️⃣ 지도에 FOD 감지된 위치 업데이트 (이제 `robot_x`가 정의된 후 실행됨)
+        try:
+            distance_cm = shared_data.get("distance", 0.0)
+            angle_deg = shared_data.get("angle", 0.0)
+
+            if distance_cm > 0:
+                self.fod_marker.update_fod_positions(robot_x, robot_y, yaw_deg)
+                print(f"🟢 FOD 감지됨: 거리 {distance_cm:.2f} cm, 각도 {angle_deg:.2f}°")
+            else:
+                print("⚠️ 감지된 FOD 없음. 지도 업데이트 건너뜀.")
+
+        except Exception as e:
+            print(f"❌ FOD 업데이트 중 오류 발생: {e}")
+
+        # ✅ 3️⃣ 지도에 FOD 표시
+        try:
+            if hasattr(self.fod_marker, 'draw_fod_on_map'):
+                self.fod_marker.draw_fod_on_map(display_img)
+            else:
+                print("⚠️ FODMarker가 아직 초기화되지 않았습니다. 지도에 표시 불가.")
+        except Exception as e:
+            print(f"❌ FOD 지도 반영 중 오류 발생: {e}")
+
+        # ✅ 4️⃣ 지도 업데이트 (웹 및 HTTP 서버 반영)
+        try:
+            MapHTTPHandler.map_image = display_img
+            cv2.imshow("Map with Robot Position", display_img)
+            cv2.waitKey(1)
+        except Exception as e:
+            print(f"❌ 지도 업데이트 중 오류 발생: {e}")
+
+
+
+    def get_robot_yaw(self):
+        """로봇의 orientation에서 yaw 각도를 계산하는 함수"""
+        qx = self.latest_pose.orientation.x
+        qy = self.latest_pose.orientation.y
+        qz = self.latest_pose.orientation.z
+        qw = self.latest_pose.orientation.w
+        yaw_rad = math.atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz))
+        return math.degrees(yaw_rad)
     
     def send_robot_pose(self, robot_x, robot_y, pixel_x, pixel_y, yaw_deg, img_width, img_height):
         # 웹소켓으로 로봇 위치 데이터 전송
@@ -453,22 +524,123 @@ class MapVisualizer(Node):
     def set_flask_socketio_callback(self, callback):
         self.flask_socketio_callback = callback
 
+#fod 마커
+class FODMarker:
+    def __init__(self, shared_data, resolution, origin):
+        """ FOD 감지 데이터를 지도에 표시하는 클래스 """
+        self.shared_data = shared_data  # 공유 데이터 (FOD 거리 및 각도)
+        self.resolution = resolution  # 지도 해상도 (m/pixel)
+        self.origin = origin  # 지도 원점 (실세계 좌표 기준)
+        self.fod_position = None  # 감지된 첫 번째 FOD 위치 (튜플)
+        self.fod_detected = False  # ✅ FOD가 지도에 표시되었는지 여부 (처음 표시 여부)
+
+    def update_fod_positions(self, robot_x, robot_y, yaw_deg):
+        """ FOD 감지 데이터를 기반으로 지도 좌표 계산 """
+        if "distance" not in self.shared_data or "angle" not in self.shared_data:
+            print("⚠️ FOD 데이터가 아직 없습니다. 업데이트 건너뜀.")
+            return
+
+        distance_cm = self.shared_data.get("distance", 0.0)  # 감지된 거리 (cm)
+        angle_deg = self.shared_data.get("angle", 0.0)  # 감지된 상대각 (deg)
+
+        if distance_cm == 0.0:
+            print("⚠️ 감지된 FOD 없음. 지도 업데이트 건너뜀.")
+            return  # 감지된 FOD 없음
+
+        # 🔹 거리 단위 변환 (cm → m)
+        distance_m = distance_cm / 150.0  # cm → m 변환
+
+        # 🔹 로봇의 방향 (yaw) 및 FOD 상대각 변환
+        yaw_rad = math.radians(yaw_deg)  # 로봇의 전역 yaw (radian)
+        angle_rad = math.radians(angle_deg)  # FOD 상대 각도 (radian)
+
+        # 🔹 FOD 실세계 좌표 계산 (로봇을 기준으로)
+        total_angle = yaw_rad + angle_rad  # ✅ 상대각도를 고려한 총 방향
+        fod_x = robot_x + distance_m * math.cos(total_angle)
+        fod_y = robot_y + distance_m * math.sin(total_angle)
+
+        # ✅ 디버깅 코드 추가 (실세계 좌표 확인)
+        print(f"🟢 로봇 위치: ({robot_x:.2f}, {robot_y:.2f}), yaw={yaw_deg:.2f}°")
+        print(f"🔎 변환된 FOD 실세계 좌표: ({fod_x:.2f}, {fod_y:.2f})")
+        # 🔹 지도 픽셀 좌표 변환 (room_x.yaml 적용)
+        fod_pixel_x = int((fod_x - self.origin[0]) / self.resolution)
+        fod_pixel_y = int((fod_y - self.origin[1]) / self.resolution)
+
+
+        # ✅ 디버깅 코드 추가 (픽셀 좌표 변환 과정 확인)
+        print(f"🔎 지도 원점 (room_x.yaml): ({self.origin[0]}, {self.origin[1]})")
+        print(f"🔎 변환된 FOD 픽셀 좌표: ({fod_pixel_x}, {fod_pixel_y})")
+
+        # ✅ 지도 범위 내 확인
+        height, width, _ = map_visualizer.map_image_color.shape
+        if not (0 <= fod_pixel_x < width and 0 <= fod_pixel_y < height):
+            print(f"❌ FOD 좌표가 지도 범위를 벗어남: ({fod_pixel_x}, {fod_pixel_y})")
+            return  # 지도 범위를 벗어나면 표시하지 않음
+
+        # ✅ 감지는 계속 수행하지만 지도에는 처음만 저장
+        if not self.fod_detected:
+            self.fod_position = (fod_pixel_x, fod_pixel_y)
+            self.fod_detected = True  # ✅ 지도에 표시되었음을 기록
+            print(f"🟢 FOD 최초 감지됨! 지도에 표시: {self.fod_position}")
+
+    def draw_fod_on_map(self, map_image):
+        """ 지도 위에 감지된 FOD를 시각적으로 표시 """
+        if self.fod_position is None:
+            return  # 지도에 표시할 FOD가 없음
+
+        height, width, _ = map_image.shape  # 이미지 크기 가져오기
+
+        x, y = self.fod_position
+
+        # OpenCV는 (0,0)이 왼쪽 상단이므로 y 좌표 반전
+        y = height - y
+
+        # 지도 범위를 벗어나지 않도록 확인
+        if 0 <= x < width and 0 <= y < height:
+            cv2.circle(map_image, (x, y), 3, (0, 255, 0), -1)  # FOD 감지 위치 (초록색 원)
+            cv2.putText(map_image, "FOD", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (0, 0, 255), 1)
+        else:
+            print(f"❌ FOD 좌표가 지도 범위를 벗어남: ({x}, {y})")
+
+
+
 def main(args=None):
     rclpy.init(args=args)
     node = MapVisualizer()
     
+    # ✅ FOD 감지 프로세스 실행 추가 (shared_data 전달)
+    print("✅ FOD 감지 프로세스 실행 시도...")
+    
+    fod_process = multiprocessing.Process(target=start_fod_detector, args=(shared_data,), daemon=True)
+    fod_process.start()  # 프로세스 시작
+
     # 전역 변수로 노드 인스턴스 저장 (Flask 앱에서 접근할 수 있도록)
     global map_visualizer
     map_visualizer = node
     
     try:
+        # ✅ 메인 ROS2 노드 실행
         rclpy.spin(node)
+        print("ros2 실행 ")
     except KeyboardInterrupt:
-        node.get_logger().info("Keyboard Interrupt, shutting down.")
+        print("🛑 KeyboardInterrupt 발생, 종료 중...")
+    except Exception as e:
+        print(f"❌ ROS2 실행 중 예외 발생: {e}")
     finally:
+        # ✅ ROS2 노드 종료
+        node.get_logger().info("ROS2 노드 종료")
         node.destroy_node()
         rclpy.shutdown()
         cv2.destroyAllWindows()
+
+        # ✅ FOD 감지 프로세스 종료
+        print("🛑 FOD 감지 프로세스 종료 중...")
+        fod_process.terminate()  # 프로세스 강제 종료
+        fod_process.join()  # 프로세스가 완전히 종료될 때까지 대기
+        print("✅ FOD 감지 프로세스 종료 완료")
+
+        print("🚀 프로그램이 완전히 종료되었습니다.")
+
 
 # 전역 변수로 MapVisualizer 인스턴스 저장
 map_visualizer = None
