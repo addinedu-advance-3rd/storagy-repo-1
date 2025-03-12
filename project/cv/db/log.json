@@ -565,5 +565,96 @@
         "user_name": "Unknown User",
         "rental_date": "2025-03-07 09:32:48",
         "return_date": "2025-03-07 09:34:33"
+    },
+    {
+        "id": 82,
+        "tool_id": 3,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-12 17:06:30"
+    },
+    {
+        "id": 83,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-12 17:06:30"
+    },
+    {
+        "id": 84,
+        "tool_id": 1,
+        "user_name": "Unknown User",
+        "rental_date": null,
+        "return_date": "2025-03-12 17:06:30"
+    },
+    {
+        "id": 85,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:06:38"
+    },
+    {
+        "id": 86,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:07:08"
+    },
+    {
+        "id": 87,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:07:15"
+    },
+    {
+        "id": 88,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:07:23"
+    },
+    {
+        "id": 89,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:07:37"
+    },
+    {
+        "id": 90,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:07:49"
+    },
+    {
+        "id": 91,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:08:07"
+    },
+    {
+        "id": 92,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:08:15"
+    },
+    {
+        "id": 93,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:09:43"
+    },
+    {
+        "id": 94,
+        "tool_id": 2,
+        "user_name": "Unknown User",
+        "rental_date": "2025-03-12 17:06:35",
+        "return_date": "2025-03-12 17:10:15"
     }
 ]

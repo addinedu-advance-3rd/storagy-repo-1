@@ -1,4 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
+from datetime import datetime
+import sys, os
 
 from app import db
 from app.models import Tool
@@ -7,8 +9,51 @@ bp = Blueprint('tool', __name__, url_prefix='/tool')
 
 @bp.route('/list/')
 def _list():
-    tool_list = Tool.query.order_by(Tool.id.asc()).all()
-    return render_template('tool/tool_list.html', tool_list=tool_list)
+    """도구 목록 페이지"""
+    # 데이터베이스 상태 확인
+    tool_list = Tool.query.all()
+    
+    # 디버깅 정보 출력
+    print("\n===== 도구 상태 확인 =====")
+    for tool in tool_list:
+        print(f"도구: {tool.name}, ID: {tool.id}, 상태: {'사용 가능' if tool.avail else '사용 중'}")
+    print("==========================\n")
+    
+    # 공유 메모리 접근 시도는 제거하고 대신 상태 파일 확인
+    try:
+        # 상태 파일 경로
+        status_file = os.path.join(os.path.dirname(__file__), '..', '..', 'cv', 'tool_status.json')
+        
+        # 파일이 존재하는지 확인
+        if os.path.exists(status_file):
+            import json
+            with open(status_file, 'r') as f:
+                try:
+                    tool_status = json.load(f)
+                    print("\n===== 상태 파일 확인 =====")
+                    for tool_name, avail in tool_status.items():
+                        print(f"도구: {tool_name}, 상태: {'사용 가능' if avail else '사용 중'}")
+                        
+                        # 데이터베이스와 파일 상태가 다른 경우 데이터베이스 업데이트
+                        db_tool = next((t for t in tool_list if t.name == tool_name), None)
+                        if db_tool and db_tool.avail != avail:
+                            print(f"상태 불일치 감지: {tool_name} - DB: {db_tool.avail}, 파일: {avail}")
+                            db_tool.avail = avail
+                            db.session.commit()
+                            print(f"데이터베이스 상태 업데이트: {tool_name} -> {avail}")
+                    print("==========================\n")
+                except json.JSONDecodeError:
+                    print("상태 파일 형식 오류")
+        else:
+            print("상태 파일이 존재하지 않습니다.")
+    except Exception as e:
+        print(f"상태 파일 확인 중 오류: {e}")
+    
+    # 최신 상태로 다시 조회
+    tool_list = Tool.query.all()
+    now = datetime.now()
+    
+    return render_template('tool/tool_list.html', tool_list=tool_list, now=now)
 
 # CREATE: 새로운 Tool 추가
 @bp.route('/', methods=['POST'])

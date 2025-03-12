@@ -43,6 +43,14 @@ def create_app():
     app.register_blueprint(log_views.bp)
     app.register_blueprint(call_views.bp)
     
+    # api_views가 존재하는지 확인 후 등록
+    try:
+        from .views import api_views
+        app.register_blueprint(api_views.bp)
+        print("API 블루프린트 등록 성공")
+    except ImportError as e:
+        print(f"API 블루프린트 등록 실패: {e}")
+    
     # Websocket
     socketio.init_app(app)
 
