@@ -51,7 +51,7 @@ if __name__ == "__main__":
             manager_thread.start()
             # Flask-SocketIO 서버 실행 (디버그 모드, 호스트, 포트 등은 설정에 따라 조정)
             # socketio.run(app, host='0.0.0.0', port=443, debug=False)
-            socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+            socketio.run(app, host='0.0.0.0', port=5001, debug=False)
     except Exception as e:
         print(f"애플리케이션 시작 중 오류 발생: {e}")
         if manager:

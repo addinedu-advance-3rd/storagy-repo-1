@@ -392,7 +392,8 @@ class MapVisualizer(Node):
 
             # 로봇 위치 표시 (빨간 원 -> 로봇이미지로)
             # ✅ 1️⃣ 로봇 이미지(`robot.png`) 불러오기 및 크기 조정 (14x14px)
-            robot_img = cv2.imread("/home/addinedu/venv/develop/circle/src/circle/circle/robot.png", cv2.IMREAD_UNCHANGED)  # PNG 이미지 불러오기
+            # robot_img = cv2.imread("/home/addinedu/venv/develop/circle/src/circle/circle/robot.png", cv2.IMREAD_UNCHANGED)  # PNG 이미지 불러오기
+            robot_img = cv2.imread("/home/addinedu/dev_ws/storagy-repo-1/circle/src/circle/circle/robot.png", cv2.IMREAD_UNCHANGED)  # PNG 이미지 불러오기
 
             if robot_img is None:
                 print("❌ 로봇 이미지(robot.png) 로드 실패")
