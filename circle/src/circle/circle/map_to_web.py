@@ -417,7 +417,7 @@ class MapVisualizer(Node):
                 print("❌ 로봇 이미지가 지도 범위를 벗어남")
 
             cv2.putText(display_img, "Robot", (pixel_x + 10, pixel_y),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255), 1)
 
             # ✅ 로봇의 yaw (방향) 계산
             yaw_deg = self.get_robot_yaw()
