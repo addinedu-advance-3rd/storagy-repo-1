@@ -23,14 +23,14 @@ def move_robot():
 
     # ✅ 이동할 목표 위치 설정 (쉼표로 구분된 문자열로 변환)
     if zone == "A":
-        target_pose = "-1.876,-0.206,0.0,-0.961,0.275"  # x, y, z, orientation_z, orientation_w
+        target_pose = "-0.046,-1.063,0.0,-0.565,0.825"  # x, y, z, orientation_z, orientation_w
     elif zone == "B":
-        target_pose = "-1.116,0.939,0.0,0.866,0.499"
+        target_pose = "0.371,0.539,0.0,0.643,0.765"
     else:
         return jsonify({"status": "error", "message": "잘못된 구역"}), 400
 
     # ✅ 쉼표로 구분된 문자열을 직접 전달
-    ssh_command = f"ssh {ROBOT_USER}@{ROBOT_IP} 'source /opt/ros/humble/setup.sh && python3 {MOVE_SCRIPT_PATH} {target_pose}'"
+    ssh_command = f"ssh {ROBOT_USER}@{ROBOT_IP} 'export ROS_DOMAIN_ID=13 && source /opt/ros/humble/setup.sh && python3 {MOVE_SCRIPT_PATH} {target_pose}'"
     
     print(f"🛠️ 실행 명령어: {ssh_command}")  # 🔹 디버깅용 출력
     subprocess.Popen(ssh_command, shell=True)
