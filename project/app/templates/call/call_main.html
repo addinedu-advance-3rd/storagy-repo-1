@@ -33,67 +33,65 @@
 {% endblock %}
 {% block script %}
 <script>
-  const ros = new ROSLIB.Ros({
-    url: 'ws://192.168.0.6:9090', // rosbridge_websocket 주소
-  });
+  const socket = new WebSocket('ws://192.168.0.6:9090');
 
-  // 버튼 클릭 이벤트 핸들러
-  document.getElementById('areaA').addEventListener('click', function () {
-    console.log('버튼 눌림')
-    
-    var navigateToPoseClient = new ROSLIB.ActionClient({
-      ros: ros,
-      serverName: '/navigate_to_pose', // nav2 액션 서버 이름
-      actionName: 'nav2_msgs/action/NavigateToPose' // 액션 메시지 유형
-    });
+  socket.onopen = () => {
+    console.log('WebSocket connected');
 
-    // 목표 위치 설정
-    const goal = new ROSLIB.Goal({
-      actionClient: navigateToPoseClient,
-      goalMessage: {
-        pose: {
-          header: {
-            frame_id: 'map', // 맵 프레임 ID
-          },
-          pose: {
-            position: {
-              x: -1.8762658935795684, // 목표 x 좌표
-              y: -0.2064057218805232, // 목표 y 좌표
-              z: 0.0, // 목표 z 좌표
+    document.getElementById('areaA').addEventListener('click', function () {
+      console.log('버튼 눌림');
+
+      const actionCall = {
+        op: 'send_action_goal',
+        action: '/navigate_to_pose',
+        action_type: 'nav2_msgs/action/NavigateToPose',
+        args : {
+          pose : {
+              header : {
+              stamp: {},
+              frame_id : 'map'
             },
-            orientation: {
-              x: 0.0,
-              y: 0.0,
-              z: -0.9612266342892032,
-              w: 0.27575960098072805,
-            },
-          },
-        },
-      },
-    });
+            pose : {
+                position: {
+                x: -0.046, 
+                y: 1.063, 
+                z: 0.0, 
+              },
+              orientation: {
+                x: 0.0,
+                y: 0.0,
+                z: -0.565,
+                w: 0.825,
+              }
+            }
+          }
+        }
+      };
 
-    ros.on('connection', function () {
-    console.log('Connected to ROS');
+      socket.send(JSON.stringify(actionCall));
+      console.log('목표 전송');
     });
+  };
 
-    ros.on('error', function (error) {
-      console.log('Error connecting to ROS:', error);
-    });
+  socket.onmessage = (event) => {
+    const response = JSON.parse(event.data);
+    console.log('Received response:', response);
 
-    ros.on('close', function () {
-      console.log('Connection to ROS closed');
-    });
+    // 응답 유형에 따른 처리
+    if (response.op === 'action_result') {
+      // 액션 결과 처리
+      console.log('Action Result:', response.result);
+    } else if (response.op === 'action_feedback') {
+      // 액션 피드백 처리
+      console.log('Action Feedback:', response.feedback);
+    } else if (response.op === 'status') {
+      // 액션 상태 처리
+      console.log('Action Status:', response.values);
+    }
+  };
 
-    goal.on('feedback', function (feedback) {
-      console.log('Feedback:', feedback);
-    });
-
-    goal.on('result', function (result) {
-      console.log('Result:', result);
-    });
-
-    goal.send();
-    console.log('목표전송')
-  });
+  socket.onclose = () => {
+    console.log('WebSocket closed');
+  };
 </script>
 {% endblock %}
