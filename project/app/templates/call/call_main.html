@@ -38,21 +38,22 @@
 
 <!-- 로봇 호출 버튼 (✅ callRobot 호출하도록 수정) -->
 <div class="text-center mt-4">
-  <button class="btn btn-secondary btn-lg" onclick="callRobot('A')">A구역 호출</button>
-  <button class="btn btn-secondary btn-lg" onclick="callRobot('B')">B구역 호출</button>
-  <button class="btn btn-secondary btn-lg" onclick="callRobot('Home')">Home 호출</button> 
+  <button class="btn btn-secondary btn-lg" >A구역 호출</button>
+  <button class="btn btn-secondary btn-lg" >B구역 호출</button>
+  <button class="btn btn-secondary btn-lg" onclick="callRobot('Home')">Home 호출</button>
 </div>
 </div>
 
 
-
+<!-- 로봇 호출 하드 코딩 버전 Home -->
 <script>
   /**
    * 📌 로봇 호출 요청 처리 함수
    * 버튼 클릭 시 모달을 띄우고 Flask 서버(`/move`)로 요청을 보낸다.
-   * @param {string} zone - 'A' 또는 'B' ,'Home' (호출할 구역)
+   * @param {string} zone 'Home' (호출할 구역)
    */
   function callRobot(zone) {
+      console.log(`📢 [${zone}] 실행 요청`);
       // ✅ 1️⃣ 사용자에게 모달 메시지 표시
       document.getElementById('modalBody').innerText = zone + '구역으로 이동 중.';
       $('#alertModal').modal('show');
@@ -67,7 +68,7 @@
       })
       .then(response => response.json())  // 서버 응답을 JSON으로 변환
       .then(data => {
-          console.log('서버 응답:', data);  // 디버깅용 콘솔 출력
+          console.log('[${zone}] 서버 응답:', data);  // 디버깅용 콘솔 출력
       })
       .catch(error => {
           console.error('오류 발생:', error);
@@ -75,5 +76,90 @@
   }
 </script>
 
+
+{% endblock %}
+
+{% block script %}
+<!-- A, B 호출 = 웹 소켓-->
+<script>
+  const socket = new WebSocket('ws://192.168.0.6:9090');
+
+  socket.onopen = () => {
+    console.log('✅ WebSocket 연결 성공!');
+
+    document.getElementById('areaA').addEventListener('click', function () {
+      const position = { x: -0.046, y: -1.063, z: 0.0 };
+      const orientation = { z: -0.565, w: 0.825 };
+
+      console.log(`📢 [A구역] 이동 명령 전송! (좌표: x=${position.x}, y=${position.y}, z=${position.z})`);
+
+      const actionCall = {
+        op: 'send_action_goal',
+        action: '/navigate_to_pose',
+        action_type: 'nav2_msgs/action/NavigateToPose',
+        args: {
+          pose: {
+            header: {
+              stamp: {},
+              frame_id: 'map'
+            },
+            pose: {
+              position: position,
+              orientation: orientation
+            }
+          }
+        }
+      };
+
+      socket.send(JSON.stringify(actionCall));
+      console.log(`🚀 [A구역] 로봇 이동 요청 완료! (방향: z=${orientation.z}, w=${orientation.w})`);
+    });
+
+    document.getElementById('areaB').addEventListener('click', function () {
+      const position = { x: 0.213, y: 0.884, z: 0.0 };
+      const orientation = { z: 0.990, w: 0.138 };
+
+      console.log(`📢 [B구역] 이동 명령 전송! (좌표: x=${position.x}, y=${position.y}, z=${position.z})`);
+
+      const actionCall = {
+        op: 'send_action_goal',
+        action: '/navigate_to_pose',
+        action_type: 'nav2_msgs/action/NavigateToPose',
+        args: {
+          pose: {
+            header: {
+              stamp: {},
+              frame_id: 'map'
+            },
+            pose: {
+              position: position,
+              orientation: orientation
+            }
+          }
+        }
+      };
+
+      socket.send(JSON.stringify(actionCall));
+      console.log(`🚀 [B구역] 로봇 이동 요청 완료! (방향: z=${orientation.z}, w=${orientation.w})`);
+    });
+  };
+
+  socket.onmessage = (event) => {
+    const response = JSON.parse(event.data);
+    console.log('📩 WebSocket 응답 수신:', response);
+
+    if (response.op === 'action_result') {
+      console.log('✅ [응답] 액션 결과:', response.result);
+    } else if (response.op === 'action_feedback') {
+      console.log('📡 [피드백] 진행 상태:', response.feedback);
+    } else if (response.op === 'status') {
+      console.log('📌 [상태] 현재 로봇 액션 상태:', response.values);
+    }
+  };
+
+  socket.onclose = () => {
+    console.log('❌ WebSocket 연결 종료됨! 재연결 필요!');
+  };
+</script>
 
 {% endblock %}
