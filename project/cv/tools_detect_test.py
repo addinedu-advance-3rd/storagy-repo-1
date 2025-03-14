@@ -17,10 +17,10 @@ logging.getLogger("ultralytics").setLevel(logging.CRITICAL)
 
 class ObjectDetect:
     def __init__(self, latest_worker
-                #  , cam_index=3
-                 , cam_index=0 #test
-                 , model_path="/home/addinedu/dev_ws/storagy-repo-1/project/cv/tools_train/runs/segment/tools_training/weights/best.pt"
-    , lost_frame_count=60, detected_frame_count=60
+                #  , cam_index=2
+                 , cam_index=2 #test
+                 , model_path="/home/addinedu/venv/facedetection/tools_train/runs/segment/toolsmergever/weights/best.pt"
+    , lost_frame_count=45, detected_frame_count=45
     , tools_status=None, event_queue=None):
         """
         객체 감지를 수행하는 클래스

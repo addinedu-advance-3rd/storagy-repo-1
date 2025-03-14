@@ -40,6 +40,7 @@
 <div class="text-center mt-4">
   <button class="btn btn-secondary btn-lg" onclick="callRobot('A')">A구역 호출</button>
   <button class="btn btn-secondary btn-lg" onclick="callRobot('B')">B구역 호출</button>
+  <button class="btn btn-secondary btn-lg" onclick="callRobot('Home')">Home 호출</button> 
 </div>
 </div>
 
@@ -49,7 +50,7 @@
   /**
    * 📌 로봇 호출 요청 처리 함수
    * 버튼 클릭 시 모달을 띄우고 Flask 서버(`/move`)로 요청을 보낸다.
-   * @param {string} zone - 'A' 또는 'B' (호출할 구역)
+   * @param {string} zone - 'A' 또는 'B' ,'Home' (호출할 구역)
    */
   function callRobot(zone) {
       // ✅ 1️⃣ 사용자에게 모달 메시지 표시

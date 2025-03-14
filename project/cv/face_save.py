@@ -9,7 +9,7 @@ import numpy as np
 #얼굴 저장 클래스
 class FaceSaver:
     #폴더 경로
-    IMG_SRC_FOLDER = "/home/addinedu/dev_ws/ftud_branch/storagy-repo-1/project/cv/img_src"
+    IMG_SRC_FOLDER = "/home/addinedu/venv/develop/project/cv/img_src"
     METADATA_PATH = os.path.join(IMG_SRC_FOLDER, "face_metadata.json")
 
     def __init__(self):

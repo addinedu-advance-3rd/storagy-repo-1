@@ -25,7 +25,7 @@ def move_robot():
     if zone == "A":
         target_pose = "-0.046,-1.063,0.0,-0.565,0.825"  # x, y, z, orientation_z, orientation_w
     elif zone == "B":
-        target_pose = "0.371,0.539,0.0,0.643,0.765"
+        target_pose = "0.213,0.884,0.0,0.990,0.138"
     else:
         return jsonify({"status": "error", "message": "잘못된 구역"}), 400
 
