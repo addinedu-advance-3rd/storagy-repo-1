@@ -50,7 +50,7 @@ class FODDetector:
 
     def detect_objects(self, frame):
         """ YOLO를 이용한 객체 감지 및 정보 저장 """
-        results = self.model(frame, conf=0.2)
+        results = self.model(frame, conf=0.5)
 
         for result in results:
             for box in result.boxes:
@@ -58,7 +58,7 @@ class FODDetector:
                 cx, cy = (x1 + x2) // 2, (y1 + y2) // 2  # 중심 좌표 계산
 
                 # ✅ y 좌표 필터 적용 (바닥에 있는 객체만 감지)
-                if cy > 250:  
+                if cy > 300:  
                     distance = self.estimate_distance(cx, cy)  # 실세계 거리 계산
                     angle = self.estimate_real_angle(cx, cy)  # 실각도 계산
 

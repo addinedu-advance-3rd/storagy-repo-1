@@ -316,7 +316,7 @@ class ObjectDetect:
                             cX = int(M["m10"] / M["m00"])
                             cY = int(M["m01"] / M["m00"])
                             label = self.target_classes[class_id]
-                            cv2.putText(frame, label, (cX, cY - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+                            #cv2.putText(frame, label, (cX, cY - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
                             detected_now[label] = True
 
             # 감지 상태 업데이트 및 중복 이벤트 방지 처리

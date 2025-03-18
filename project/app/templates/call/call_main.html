@@ -38,8 +38,8 @@
 
 <!-- 로봇 호출 버튼 (✅ callRobot 호출하도록 수정) -->
 <div class="text-center mt-4">
-  <button class="btn btn-secondary btn-lg" >A구역 호출</button>
-  <button class="btn btn-secondary btn-lg" >B구역 호출</button>
+  <button id="areaA" class="btn btn-secondary btn-lg" >A구역 호출</button>
+  <button id="areaB" class="btn btn-secondary btn-lg" >B구역 호출</button>
   <button class="btn btn-secondary btn-lg" onclick="callRobot('Home')">Home 호출</button>
 </div>
 </div>
@@ -116,8 +116,8 @@
     });
 
     document.getElementById('areaB').addEventListener('click', function () {
-      const position = { x: 0.213, y: 0.884, z: 0.0 };
-      const orientation = { z: 0.990, w: 0.138 };
+      const position = { x: 0.188, y: 0.871, z: 0.0 };
+      const orientation = { z: 0.743, w: 0.668 };
 
       console.log(`📢 [B구역] 이동 명령 전송! (좌표: x=${position.x}, y=${position.y}, z=${position.z})`);
 

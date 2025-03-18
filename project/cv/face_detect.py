@@ -94,7 +94,7 @@ class FaceDetect:
                     distance = self.calculate_distance(ref_embedding, embedding)
                     if distance < min_distance:
                         min_distance = distance
-                        best_match = user_id if min_distance < 0.8 else "No Match"
+                        best_match = user_id if min_distance < 0.85 else "No Match"
                 
                 if best_match != "No Match":
                     self.last_valid_worker = best_match
