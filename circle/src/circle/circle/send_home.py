@@ -6,11 +6,20 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, Twist
 from nav2_msgs.action import NavigateToPose
 from std_srvs.srv import Trigger
+from std_msgs.msg import Bool
+
+# ROS2 Action (XARM)
+from package_msg.action import ActionMessages
+from rclpy.action import ActionClient
 
 class GoalSender(Node):
     def __init__(self):
         super().__init__('goal_sender')
-        
+
+        # ✅ xArm 액션 클라이언트 생성
+        self.action_client= ActionClient(self, ActionMessages, 'action_messages',)
+        self.get_logger().info("xArm 액션 클라이언트 생성 완료!")
+
         # 네비게이션 액션 클라이언트
         self.client = ActionClient(self, NavigateToPose, '/navigate_to_pose')
         
@@ -28,7 +37,7 @@ class GoalSender(Node):
         self.dock_service_ready = False
         self.docking_mode = False
         self.navigation_started = False
-        
+        self.callback_sent = False
         # 타이머 저장 변수
         self.delayed_timers = []
         
@@ -42,6 +51,65 @@ class GoalSender(Node):
         self.timer = self.create_timer(1.0, self.timer_callback)
         
         self.get_logger().info("목표 지점 이동 노드 초기화 완료")
+
+        self.docking_complete_sub = self.create_subscription(
+            Bool,
+            '/docking_complete',
+            self.docking_complete_callback,
+            10
+        )
+        self.cmd_vel_locked = False
+        # self.xarm_arrival_subscriber = self.create_subscription(
+        #     String,
+        #     '/xarm_arrival',
+        #     self.xarm_arrival_callback,
+        #     10
+        # )
+
+    def cmd_vel_publisher(self, linear_x, angular_z):
+        if self.cmd_vel_locked:
+            print("cmd_vel_locked")
+            return
+        twist = Twist()
+        twist.linear.x = linear_x
+        twist.angular.z = angular_z
+        self.cmd_vel_pub.publish(twist)
+        timer = self.create_timer(0.3, lambda: self.unlock_cmd_vel(timer))
+
+    def unlock_cmd_vel(self, timer):
+        timer.cancel()
+        self.cmd_vel_locked = False
+
+    # ====== XARM Action Client ========
+    def send_xarm_command(self):
+        """XArm에게 동작 명령을 보내는 함수"""
+        goal_msg = ActionMessages.Goal()
+        goal_msg.command = "도착"
+
+        self.get_logger().info(f"📡 xArm에 명령 전송 준비")
+        self.action_client.wait_for_server()
+        self.get_logger().info(f"📡 xArm에 도착 명령 전송")
+
+        future = self.action_client.send_goal_async(goal_msg)
+        future.add_done_callback(self.goal_response_callback)  # ✅ 콜백 등록
+
+    def goal_response_callback(self, future):
+        """xArm이 명령을 수락했는지 확인"""
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().info("🚫 xArm 작업이 거부되었습니다")
+            return
+        self.get_logger().info("✅ xArm 작업이 시작되었습니다!")
+
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(self.get_result_callback)  # ✅ 결과 콜백 등록
+    
+    def get_result_callback(self, future):
+        """xArm 동작 결과를 받는 콜백"""
+        result = future.result()
+        self.get_logger().info(f"🔔 xArm 작업 완료: {result.result}")
+
+    # ==================================   
 
     def create_delayed_timer(self, delay, callback):
         """일회성 지연 타이머 생성 (oneshot 대체)"""
@@ -79,7 +147,7 @@ class GoalSender(Node):
         """네비게이션 서버 활성화를 위해 로봇을 제자리에서 회전"""
         twist = Twist()
         twist.angular.z = 0.1  # 느린 속도로 회전
-        self.cmd_vel_pub.publish(twist)
+        self.cmd_vel_publisher(0.0, 0.1)
         self.get_logger().info("로봇 제자리 회전 중 (네비게이션 서버 활성화 시도)")
 
     def send_goal(self):
@@ -92,16 +160,35 @@ class GoalSender(Node):
         goal_msg.pose.header.stamp.nanosec = 0  
 
         # 목표 좌표 설정
-        goal_msg.pose.pose.position.x = -0.284
-        goal_msg.pose.pose.position.y = 0.137
+        goal_msg.pose.pose.position.x = 1.05763
+        goal_msg.pose.pose.position.y = -0.37487
         goal_msg.pose.pose.position.z = 0.0  
 
         # 방향 (Quaternion) 설정
-        goal_msg.pose.pose.orientation.z = -0.733
-        goal_msg.pose.pose.orientation.w = 0.679
+        goal_msg.pose.pose.orientation.z = -0.73800
+        goal_msg.pose.pose.orientation.w = 0.67479
 
         self.future = self.client.send_goal_async(goal_msg)
         self.future.add_done_callback(self.goal_response_callback)
+
+    def docking_complete_callback(self, msg):
+        """도킹 완료 메시지 처리"""
+        self.get_logger().info(f'🔔 도킹 완료 메시지 수신: {msg.data}')
+        if msg.data:
+            """xArm 도착 메시지 처리"""
+            self.get_logger().info('🎯 도킹 완료! 공구 정리 시작...')
+            # 공구 정리 시작
+            # time.sleep(1.0)
+            if not self.callback_sent :  
+                self.send_xarm_command()
+                self.callback_sent = True
+            arrival_msg = String()
+            arrival_msg.data = "DOCKING_COMPLETE_arrival"
+            self.arrival_publisher.publish(arrival_msg)
+        # self.get_logger().info(f'🔔 도킹 완료 메시지 수신: {msg.data}')
+        # if msg.data == "XARM_ARRIVAL:success=True":
+
+        
 
     def goal_response_callback(self, future: Future):
         """네비게이션 서버가 목표를 수락했는지 확인"""
@@ -143,6 +230,8 @@ class GoalSender(Node):
             self.get_logger().info(f'❌ 목표 도착 실패! 상태: {status_str}')
             # 실패 시 다시 시도
             self.create_delayed_timer(3.0, self.send_goal)
+    # def xarm_arrival_callback(self, msg):
+        
 
     def timer_callback(self):
         """상태 모니터링 및 필요시 조치"""
@@ -213,13 +302,16 @@ class GoalSender(Node):
             self.get_logger().info(f'📡 도킹 서비스 응답 내용: success={response.success}, message={response.message}')
             
             if response.success:
-                self.get_logger().info(f'✅ 도킹 성공: {response.message}')
-                # 도킹 성공 메시지 발행
+                # 도킹 서비스 요청 메시지 발행
+                self.get_logger().info(f'✅ 도킹 서비스 요청 완료: {response.message}')
+                
+                # 공구 정리 시작
                 msg = String()
-                msg.data = "DOCKING_COMPLETE"
-                self.arrival_publisher.publish(msg)
+                # self.send_xarm_command()
+                # msg.data = "DOCKING_COMPLETE:success=True"
+                # self.arrival_publisher.publish(msg)
             else:
-                self.get_logger().info(f'❌ 도킹 실패: {response.message}')
+                self.get_logger().info(f'❌ 도킹 요청 실패: {response.message}')
                 self.docking_mode = False
                 self.get_logger().info('🔄 도킹 모드 해제됨! 5초 후 재시도...')
                 # 실패 시 5초 후 재시도
