@@ -1,0 +1,40 @@
+.idea
+pybo.db
+*.pyc
+__pycache__
+
+# Ignore specific model weight files
+src/face_detect/weights/age_model_weights.h5
+src/face_detect/weights/gender_model_weights.h5
+src/gui/main/video_src/
+src/gui/main/img_src/
+src/gui/main/video_src/*.webm
+src/gui/main/video_src/*.mp4
+
+
+# (Optional) Ignore all .h5 files in the weights directory
+src/face_detect/weights/*.h5
+node_modules
+
+# Ignore all .pyc files
+*.pyc
+
+
+# ignore pycache
+__pycache__
+# Ignore all .log files
+*.log
+
+*.avi
+*.mp4
+*.webm
+
+src/cup_detect/output.avi
+src/cup_detect/10_seconds_output.avi
+src/cup_detect/output.mp4
+
+src/face_detect/face_metadata.json
+
+build/
+log/
+install/

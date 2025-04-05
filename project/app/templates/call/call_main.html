@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="modal" id="alertModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">09bot</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="modalBody">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">확인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<div class="container">
+    <!--지도 페이지 가져오기 --> 
+    <div class="text-center" style="overflow: hidden; width: 100%; height: 70vh;">
+      <iframe id="mapFrame" src="http://127.0.0.1:8000/" width="100%" height="100%" style="border: none;" scrolling="no"></iframe>
+    </div>
+
+    <script>
+      // 지도 ㅅ로고침
+      function refreshMap() {
+          var frame = document.getElementById("mapFrame");
+          frame.src = "http://127.0.0.1:8000/";  // 자동 새로고침
+      }
+      setInterval(refreshMap, 1000);  // 1초마다 최신 페이지 로드
+  </script>
+</div>
+
+
+
+
+<!-- 로봇 호출 버튼 (✅ callRobot 호출하도록 수정) -->
+<div class="text-center mt-4">
+  <button class="btn btn-secondary btn-lg" onclick="callRobot('A')">A구역 호출</button>
+  <button class="btn btn-secondary btn-lg" onclick="callRobot('B')">B구역 호출</button>
+</div>
+</div>
+
+
+
+<script>
+  /**
+   * 📌 로봇 호출 요청 처리 함수
+   * 버튼 클릭 시 모달을 띄우고 Flask 서버(`/move`)로 요청을 보낸다.
+   * @param {string} zone - 'A' 또는 'B' (호출할 구역)
+   */
+  function callRobot(zone) {
+      // ✅ 1️⃣ 사용자에게 모달 메시지 표시
+      document.getElementById('modalBody').innerText = zone + '구역으로 이동 중.';
+      $('#alertModal').modal('show');
+
+      // ✅ 2️⃣ Flask 서버로 이동 요청 전송
+      fetch('http://127.0.0.1:5050/move', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ zone: zone })  // 구역(A/B) 정보 전송
+      })
+      .then(response => response.json())  // 서버 응답을 JSON으로 변환
+      .then(data => {
+          console.log('서버 응답:', data);  // 디버깅용 콘솔 출력
+      })
+      .catch(error => {
+          console.error('오류 발생:', error);
+      });
+  }
+</script>
+
+
+{% endblock %}
