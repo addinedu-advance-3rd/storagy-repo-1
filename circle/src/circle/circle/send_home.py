@@ -59,12 +59,6 @@ class GoalSender(Node):
             10
         )
         self.cmd_vel_locked = False
-        # self.xarm_arrival_subscriber = self.create_subscription(
-        #     String,
-        #     '/xarm_arrival',
-        #     self.xarm_arrival_callback,
-        #     10
-        # )
 
     def cmd_vel_publisher(self, linear_x, angular_z):
         if self.cmd_vel_locked:
@@ -92,6 +86,7 @@ class GoalSender(Node):
 
         future = self.action_client.send_goal_async(goal_msg)
         future.add_done_callback(self.goal_response_callback)  # ✅ 콜백 등록
+    # ====== XARM Action Client ========
 
     def goal_response_callback(self, future):
         """xArm이 명령을 수락했는지 확인"""
@@ -178,15 +173,12 @@ class GoalSender(Node):
             """xArm 도착 메시지 처리"""
             self.get_logger().info('🎯 도킹 완료! 공구 정리 시작...')
             # 공구 정리 시작
-            # time.sleep(1.0)
             if not self.callback_sent :  
                 self.send_xarm_command()
                 self.callback_sent = True
             arrival_msg = String()
             arrival_msg.data = "DOCKING_COMPLETE_arrival"
             self.arrival_publisher.publish(arrival_msg)
-        # self.get_logger().info(f'🔔 도킹 완료 메시지 수신: {msg.data}')
-        # if msg.data == "XARM_ARRIVAL:success=True":
 
         
 
